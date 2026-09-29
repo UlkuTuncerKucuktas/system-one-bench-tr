@@ -54,9 +54,11 @@ python -m s1bench.fingerprints
 ```
 
 This writes `data/fingerprints.txt`: a hash of every 8-word window of every dev and test text, and a
-hash of every whole text in `rest.jsonl`. A training text touches the benchmark when
-`s1bench.fingerprints.fingerprints(text)` shares a hash with that file. Models we train only see text
-that shares none.
+hash of every whole text in `rest.jsonl`. Models we train never see a text that copies the benchmark:
+one whose whole text matches a hash in that file (for texts of four words or more), half of whose
+8-word windows are in it, or that has 10 windows in it in a row (17 words). A few scattered shared
+windows do not count, because they are common phrases such as law names ("5271 sayılı Ceza
+Muhakemesi Kanunu"), and very short texts such as "tamam" appear everywhere.
 
 ## Results
 
