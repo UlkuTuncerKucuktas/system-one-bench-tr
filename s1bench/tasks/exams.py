@@ -2,6 +2,16 @@ from ..download import hf_rows
 from ..split import shuffled, split
 
 INSTRUCTIONS = "Bu sorunun doğru cevabı hangisidir?"
+DIFFICULTY = {
+    "type": "score",
+    "instructions": "Bu soruyu öğrencilerin ne kadarı doğru cevapladı?",
+    "criteria": [
+        "Kolay: öğrencilerin en az %42'si doğru cevapladı",
+        "Orta: öğrencilerin %28 ile %41'i doğru cevapladı",
+        "Zor: öğrencilerin en fazla %27'si doğru cevapladı",
+    ],
+}
+LEVELS = ["easy", "medium", "hard"]
 
 
 def exam_item(r, answer):
@@ -36,3 +46,36 @@ def build_global_mmlu():
     agnostic = shuffled(item for item in test if item["meta"]["cultural_sensitivity"] == "CA")
     unlabelled = [item for item in test if item["meta"]["cultural_sensitivity"] == "-"]
     return split(sensitive[:500] + agnostic[:500], global_mmlu_items("dev"), sensitive[500:] + agnostic[500:] + unlabelled)
+
+
+def build_turkishmmlu():
+    items = []
+    for r in hf_rows("AYueksel/TurkishMMLU", "All", "test"):
+        options = dict(zip("ABCDE", r["choices"]))
+        items.append({
+            "state": r["question"],
+            "questions": {"answer": {"type": "choice", "instructions": INSTRUCTIONS, "criteria": options}},
+            "gold": {"answer": "ABCDE"[r["answer"]]},
+            "meta": {"subject": r["subject"], "grade": r["metadata"]["grade"]},
+        })
+    return split(items)
+
+
+def build_turkishmmlu_difficulty():
+    items = []
+    for r in hf_rows("AYueksel/TurkishMMLU", "All", "test"):
+        state = {"sınıf": r["metadata"]["grade"], "soru": r["question"], "seçenekler": dict(zip("ABCDE", r["choices"])), "doğru_cevap": "ABCDE"[r["answer"]]}
+        items.append({"state": state, "questions": {"difficulty": DIFFICULTY}, "gold": {"difficulty": LEVELS.index(r["metadata"]["difficulty"])}})
+    return split(items)
+
+
+def build_tus21():
+    items = []
+    for r in hf_rows("zypchn/TUS21-exams", None, "train"):
+        options = {choice[0]: choice[3:] for choice in r["choices"]}
+        items.append({
+            "state": r["question"],
+            "questions": {"answer": {"type": "choice", "instructions": INSTRUCTIONS, "criteria": options}},
+            "gold": {"answer": r["answer_idx"]},
+        })
+    return split(items)

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import kagglehub
 from datasets import load_dataset
+from huggingface_hub import hf_hub_download
 
 CACHE = Path(__file__).parent.parent / ".cache"
 
@@ -20,6 +21,10 @@ def download(url):
         CACHE.mkdir(exist_ok=True)
         urllib.request.urlretrieve(url, path)
     return path
+
+
+def hf_file(repo, name):
+    return Path(hf_hub_download(repo, name, repo_type="dataset"))
 
 
 def kaggle_file(dataset, name):
