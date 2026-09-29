@@ -32,6 +32,7 @@ def global_mmlu_items(split_name):
 
 def build_global_mmlu():
     test = global_mmlu_items("test")
-    sensitive = [item for item in test if item["meta"]["cultural_sensitivity"] == "CS"]
-    agnostic = [item for item in test if item["meta"]["cultural_sensitivity"] == "CA"]
-    return split(shuffled(sensitive)[:500] + shuffled(agnostic)[:500], global_mmlu_items("dev"))
+    sensitive = shuffled(item for item in test if item["meta"]["cultural_sensitivity"] == "CS")
+    agnostic = shuffled(item for item in test if item["meta"]["cultural_sensitivity"] == "CA")
+    unlabelled = [item for item in test if item["meta"]["cultural_sensitivity"] == "-"]
+    return split(sensitive[:500] + agnostic[:500], global_mmlu_items("dev"), sensitive[500:] + agnostic[500:] + unlabelled)

@@ -33,4 +33,8 @@ def to_items(filename):
 
 
 def build():
-    return split(to_items("multinli_tr_1.0_dev_matched.jsonl"), to_items("multinli_tr_1.0_dev_mismatched.jsonl"))
+    return split(
+        to_items("multinli_tr_1.0_dev_matched.jsonl"),
+        to_items("multinli_tr_1.0_dev_mismatched.jsonl"),
+        to_items("multinli_tr_1.0_train.jsonl"),
+    )

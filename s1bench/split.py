@@ -10,8 +10,9 @@ def shuffled(items):
     return items
 
 
-def split(test, dev=None):
+def split(test, dev=None, rest=()):
     test = shuffled(test)
     if dev is None:
         dev, test = test[: len(test) // 10], test[len(test) // 10 :]
-    return {"dev": shuffled(dev)[:DEV_SIZE], "test": test[:TEST_SIZE]}
+    dev = shuffled(dev)
+    return {"dev": dev[:DEV_SIZE], "test": test[:TEST_SIZE], "rest": dev[DEV_SIZE:] + test[TEST_SIZE:] + list(rest)}

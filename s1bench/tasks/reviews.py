@@ -38,7 +38,7 @@ def to_items(repo, split_name, question):
 
 
 def build_reviews(repo, question):
-    return split(to_items(repo, "test", question), to_items(repo, "validation", question))
+    return split(to_items(repo, "test", question), to_items(repo, "validation", question), to_items(repo, "train", question))
 
 
 def build_buyuksinema():

@@ -30,4 +30,4 @@ def to_items(filename):
 
 
 def build():
-    return split(to_items("stsb_tr_test.tsv"), to_items("stsb_tr_dev.tsv"))
+    return split(to_items("stsb_tr_test.tsv"), to_items("stsb_tr_dev.tsv"), to_items("stsb_tr_train.tsv"))

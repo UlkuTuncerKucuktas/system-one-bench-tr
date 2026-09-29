@@ -42,7 +42,11 @@ def to_items(rows, verdicts):
 
 def build():
     verdicts = ["doğru", "çoğunlukla doğru", "kısmen doğru / yanıltıcı", "çoğunlukla yanlış", "yanlış"]
-    return split(to_items(turkish_rows("test.all.tsv"), verdicts), to_items(turkish_rows("dev.all.tsv"), verdicts))
+    return split(
+        to_items(turkish_rows("test.all.tsv"), verdicts),
+        to_items(turkish_rows("dev.all.tsv"), verdicts),
+        to_items(turkish_rows("train.all.tsv"), verdicts),
+    )
 
 
 def build_teyit():

@@ -1,4 +1,23 @@
-from . import belebele, exams, jev_noul, massive, nli, offenseval, reviews, stsb, xcopa, xfact
+from . import (
+    aym,
+    belebele,
+    biltweetnews,
+    checkworthy,
+    exams,
+    jev_noul,
+    massive,
+    mide22,
+    nli,
+    offenseval,
+    reviews,
+    seahorse,
+    spam,
+    stsb,
+    webfaq,
+    xcopa,
+    xfact,
+    xsid,
+)
 
 TASKS = {
     "massive_intent_tr": massive.build,
@@ -15,4 +34,25 @@ TASKS = {
     "buyuksinema_tr": reviews.build_buyuksinema,
     "musteri_yorumlari_tr": reviews.build_musteri_yorumlari,
     "stsb_tr": stsb.build,
+    "xsid_tr": xsid.build,
+    "sms_spam_tr": spam.build,
+    "seahorse_tr": seahorse.build,
+    "webfaq_tr": webfaq.build,
+    "mide22_tr": mide22.build,
+    "checkthat_tr": checkworthy.build_checkthat,
+    "trclaim19_tr": checkworthy.build_trclaim19,
+    "biltweetnews_tr": biltweetnews.build,
+    "aym_outcome_tr": aym.build,
+}
+
+AREAS = {
+    "intent": ["massive_intent_tr", "xsid_tr"],
+    "opinion": ["buyuksinema_tr", "musteri_yorumlari_tr", "biltweetnews_tr"],
+    "safety": ["offenseval_tr", "sms_spam_tr"],
+    "fact_checking": ["xfact_tr", "xfact_teyit_tr", "mide22_tr", "checkthat_tr", "trclaim19_tr"],
+    "judging": ["seahorse_tr", "webfaq_tr"],
+    "workflow": ["jev_noul_tr", "jev_noul_unseen_tr"],
+    "legal": ["aym_outcome_tr"],
+    "language": ["nli_tr", "stsb_tr", "belebele_tr", "xcopa_tr"],
+    "knowledge": ["include_tr", "global_mmlu_tr"],
 }

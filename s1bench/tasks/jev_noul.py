@@ -17,7 +17,7 @@ def to_items(split_name):
 
 
 def build():
-    return split(to_items("test"), to_items("validation"))
+    return split(to_items("test"), to_items("validation"), to_items("train"))
 
 
 def build_unseen():

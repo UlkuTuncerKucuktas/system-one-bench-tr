@@ -12,4 +12,4 @@ def build():
     def to_items(split_rows):
         return [{"state": r["text"], "questions": {"intent": question}, "gold": {"intent": r["label"]}} for r in split_rows]
 
-    return split(to_items(rows["test"]), to_items(rows["validation"]))
+    return split(to_items(rows["test"]), to_items(rows["validation"]), to_items(rows["train"]))

@@ -26,4 +26,4 @@ def evaluate(model_name, tasks):
 
 if __name__ == "__main__":
     model_name, *tasks = sys.argv[1:]
-    evaluate(model_name, tasks or sorted(path.name for path in DATA.iterdir()))
+    evaluate(model_name, tasks or sorted(path.name for path in DATA.iterdir() if path.is_dir()))

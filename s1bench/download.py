@@ -4,6 +4,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
+import kagglehub
 from datasets import load_dataset
 
 CACHE = Path(__file__).parent.parent / ".cache"
@@ -19,6 +20,10 @@ def download(url):
         CACHE.mkdir(exist_ok=True)
         urllib.request.urlretrieve(url, path)
     return path
+
+
+def kaggle_file(dataset, name):
+    return Path(kagglehub.dataset_download(dataset)) / name
 
 
 def read_zip(path, name):
