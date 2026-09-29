@@ -1,0 +1,7 @@
+datasets
+torch
+transformers
+httpx
+accelerate
+laya
+flash-linear-attention
