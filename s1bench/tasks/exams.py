@@ -1,3 +1,5 @@
+import re
+
 from ..download import hf_rows
 from ..split import shuffled, split
 
@@ -23,8 +25,16 @@ def exam_item(r, answer):
     }
 
 
+def normalised(text):
+    return " ".join(re.findall(r"\w+", text.lower()))
+
+
 def include_items(split_name):
-    return [exam_item(r, "ABCD"[r["answer"]]) for r in hf_rows("CohereLabs/include-base-44", "Turkish", split_name)]
+    # INCLUDE repeats 137 TurkishMMLU questions with one option dropped, often the right one, and answers that disagree with
+    # TurkishMMLU's; turkishmmlu_tr asks them properly
+    turkishmmlu = {normalised(r["question"]) for r in hf_rows("AYueksel/TurkishMMLU", "All", "test")}
+    rows = hf_rows("CohereLabs/include-base-44", "Turkish", split_name)
+    return [exam_item(r, "ABCD"[r["answer"]]) for r in rows if normalised(r["question"]) not in turkishmmlu]
 
 
 def build_include():

@@ -9,6 +9,7 @@ from .tasks import AREAS
 RESULTS = DATA.parent / "results"
 
 TEMPERATURES = [0.05 * 1.1**i for i in range(80)]
+MIN_DEV = 30
 
 
 def read(path):
@@ -49,6 +50,10 @@ def ece(data, bins=15):
     return total
 
 
+def brier(data):
+    return sum(sum((p[k] - (k == g)) ** 2 for k in p) for p, g, _ in data) / len(data)
+
+
 def macro_f1(data):
     predictions = [(max(p, key=p.get), gold) for p, gold, _ in data]
     f1 = []
@@ -60,16 +65,19 @@ def macro_f1(data):
     return sum(f1) / len(f1)
 
 
-def metrics(dev, test, score):
+def metrics(dev, raw, score):
     temperature = min(TEMPERATURES, key=lambda t: nll(dev, t))
-    test = [(rescale(probs, temperature), gold, soft) for probs, gold, soft in test]
+    test = [(rescale(probs, temperature), gold, soft) for probs, gold, soft in raw]
     row = {
         "n": len(test),
         "accuracy": sum(max(p, key=p.get) == g for p, g, _ in test) / len(test),
         "majority": max(Counter(g for _, g, _ in test).values()) / len(test),
         "macro_f1": macro_f1(test),
-        "brier": sum(sum((p[k] - (k == g)) ** 2 for k in p) for p, g, _ in test) / len(test),
+        "brier": brier(test),
         "ece": ece(test),
+        "raw_nll": nll(raw, 1),
+        "raw_brier": brier(raw),
+        "raw_ece": ece(raw),
         "temperature": temperature,
     }
     if score:
@@ -87,23 +95,27 @@ def main():
             pooled = [row for rows in dev.values() for row in rows]
             scores = {qid for item in read(DATA / task_dir.name / "test.jsonl") for qid, q in item["questions"].items() if q["type"] == "score"}
             for qid, test in answers(model_dir.name, task_dir.name, "test").items():
-                # some bev_tr questions have no dev items; they get the temperature of the whole task
-                rows.append({"model": model_dir.name, "task": task_dir.name, "question": qid, **metrics(dev.get(qid, pooled), test, qid in scores)})
+                # questions with few dev items (many in bev_tr) get the temperature of the whole task
+                question_dev = dev.get(qid, [])
+                question_dev = question_dev if len(question_dev) >= MIN_DEV else pooled
+                rows.append({"model": model_dir.name, "task": task_dir.name, "question": qid, **metrics(question_dev, test, qid in scores)})
 
     with open(RESULTS / "scores.csv", "w", newline="") as f:
-        fieldnames = ["model", "task", "question", "n", "accuracy", "majority", "macro_f1", "brier", "ece", "mae", "vote_distance", "temperature"]
+        fieldnames = ["model", "task", "question", "n", "accuracy", "majority", "macro_f1", "brier", "ece", "mae", "vote_distance", "raw_nll", "raw_brier", "raw_ece", "temperature"]
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
 
+    # a task's accuracy weights its questions by their number of items
     by_task = {}
     for row in rows:
-        by_task.setdefault((row["model"], row["task"]), []).append(row["accuracy"])
+        correct, n = by_task.get((row["model"], row["task"]), (0, 0))
+        by_task[(row["model"], row["task"])] = (correct + row["accuracy"] * row["n"], n + row["n"])
     print("accuracy".ljust(22) + "".join(area.rjust(15) for area in AREAS))
     for model in sorted({row["model"] for row in rows}):
         cells = []
         for tasks in AREAS.values():
-            scores = [sum(by_task[(model, task)]) / len(by_task[(model, task)]) for task in tasks if (model, task) in by_task]
+            scores = [by_task[(model, task)][0] / by_task[(model, task)][1] for task in tasks if (model, task) in by_task]
             cells.append(f"{sum(scores) / len(scores):.3f}" if len(scores) == len(tasks) else "-")
         print(model.ljust(22) + "".join(cell.rjust(15) for cell in cells))
 

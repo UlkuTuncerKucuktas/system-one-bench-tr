@@ -4,9 +4,13 @@ import re
 
 from .build import DATA
 
+# a copy typed without Turkish letters ("var mi") still matches
+FOLD = str.maketrans("çğıöşüâîû", "cgiosuaiu")
+QUOTED = re.compile(r"[\"“](.+?)[\"”]")
+
 
 def words(text):
-    text = text.replace("İ", "i").replace("I", "ı").lower()
+    text = text.replace("İ", "i").replace("I", "ı").lower().translate(FOLD)
     return re.findall(r"[^\W_]+", re.sub(r"https?://\S+|@\w+", " ", text))
 
 
@@ -33,7 +37,9 @@ def main():
     seen = set()
     for path in sorted(DATA.glob("*/*.jsonl")):
         for line in open(path, encoding="utf-8"):
-            for text in texts(json.loads(line)["state"]):
+            item = json.loads(line)
+            quoted = [q for text in texts(item["questions"]) for q in QUOTED.findall(text)]
+            for text in texts(item["state"]) + quoted:
                 if path.stem == "rest":
                     seen.add(fingerprint(words(text)))
                 else:

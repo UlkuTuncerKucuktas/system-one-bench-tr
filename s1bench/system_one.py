@@ -53,7 +53,7 @@ class Laya:
 
     def predict(self, items):
         return [
-            {qid: answer_probabilities(self.agent.predict(item["state"], {qid: q})["answers"][qid]) for qid, q in item["questions"].items()}
+            {qid: answer_probabilities(self.agent.predict(item["state"], {qid: q}, max_len=8192)["answers"][qid]) for qid, q in item["questions"].items()}
             for item in items
         ]
 

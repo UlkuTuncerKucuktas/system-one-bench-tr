@@ -1,3 +1,5 @@
+import re
+
 from ..download import download, read_tsv
 from ..split import split
 
@@ -12,6 +14,8 @@ VERDICTS = {
     "complicated/hard to categorise": "belirsiz",
 }
 FACT_CHECKERS = ["dogrulukpayi", "doğruluk pay", "teyit.org", "teyitorg", "malumatfurus", "yalansavar"]
+# snippets elsewhere that state a verdict, such as Twitter Moments ("...iddiası doğru değil") and copied fact-checks
+VERDICT = re.compile(r"iddias[ıi],? (doğru|yanlış|gerçek|asılsız)|gerçeği yansıtm|İDDİA ?:|İLGİLİ İDDİA", re.I)
 
 
 def turkish_rows(filename):
@@ -23,7 +27,7 @@ def evidence(r):
     for i in range(1, 6):
         text = r[f"evidence_{i}"]
         seen_on = (text + " " + r[f"link_{i}"]).lower()
-        if text and not any(name in seen_on for name in FACT_CHECKERS):
+        if text and not any(name in seen_on for name in FACT_CHECKERS) and not VERDICT.search(text):
             snippets.append(text)
     return snippets
 

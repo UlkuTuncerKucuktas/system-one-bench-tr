@@ -35,9 +35,12 @@ its probabilities to `results/<model>/<task>/`. `score` fits one temperature per
 question on dev, then writes one row per question to `results/scores.csv`: accuracy, Brier score,
 calibration error (ECE), for Score questions the mean absolute error of the expected level, and,
 where annotators' votes are known, `vote_distance`, the total variation distance between the model's
-probabilities and the votes. A question without dev items (a few in bev_tr) gets the temperature
-fitted on the whole task. It also prints accuracy averaged over the tasks of each area; the
-secondary tasks are left out of those averages.
+probabilities and the votes. A question with fewer than 30 dev items (many in bev_tr) gets the
+temperature fitted on the whole task. `raw_nll`, `raw_brier` and `raw_ece` measure the model's own
+probabilities before any temperature, which is how well a model is calibrated on questions it has no
+dev items for. Macro-F1 averages the classes that occur in test. `score` also prints accuracy averaged
+over the tasks of each area, where a task's accuracy weights its questions by their number of items;
+the secondary tasks are left out of those averages.
 
 Models are listed in `s1bench/models.py`:
 
@@ -49,7 +52,7 @@ Models are listed in `s1bench/models.py`:
 - Metask-Jev-4B uses its own prompt format and handles at most 26 options, so besides those it skips
   MASSIVE and jev-bench-tr's MASSIVE and GoEmotions. It reads prompts of up to 32,768 tokens, since
   the other models read the whole state too.
-- Laya uses its multilingual checkpoint.
+- Laya uses its multilingual checkpoint with `max_len=8192`; by default it cuts documents at 1,024 tokens.
 - Jev needs your key in `TYPESAFE_API_KEY`.
 - Jev and Laya get one question per request, like the LLMs. Sending an item's questions together
   would give labels away: seahorse_tr asks its other five questions only when the raters understood
@@ -72,51 +75,62 @@ such as "tamam" appear everywhere.
 
 ## Results
 
-Accuracy, macro-F1 and ECE average the 29 area tasks that every model answered (all but MASSIVE, which
-Metask skips); each task counts once, with its questions averaged. Score MAE averages the four Score
-tasks. The last two columns average the 14 secondary tasks outside jev-bench-tr and the 17
-jev-bench-tr tasks that every LLM and Metask answered. Jev was run on the area tasks only.
+Accuracy, macro-F1, Brier score and ECE average the 25 area tasks that every model answered (all but
+MASSIVE, which Metask skips); a task's value weights its questions by their number of items. ECE is
+measured after each question's dev temperature, raw ECE on the model's own probabilities. Score MAE
+averages the three Score tasks. The last two columns average the 18 secondary tasks outside
+jev-bench-tr and the 17 jev-bench-tr tasks that every LLM and Metask answered; Jev has results for only
+three of the secondary tasks. The last row always answers the most common label of each question's
+test items.
 
-| Model | Accuracy | Macro-F1 | ECE | MASSIVE accuracy | Score MAE | Secondary accuracy | jev-bench-tr accuracy |
-|---|---|---|---|---|---|---|---|
-| `jev` | 0.720 | 0.688 | 0.068 | 0.788 | 0.79 | – | – |
-| `gemma-4-12b` | 0.704 | 0.668 | 0.053 | 0.777 | 0.77 | 0.759 | 0.637 |
-| `qwen3.5-35b-a3b` | 0.689 | 0.647 | 0.050 | 0.771 | 0.81 | 0.754 | 0.655 |
-| `metask-jev-4b` | 0.655 | 0.610 | 0.066 | – | 0.88 | 0.661 | 0.654 |
-| `qwen3.5-9b` | 0.655 | 0.608 | 0.054 | 0.691 | 0.92 | 0.704 | 0.626 |
-| `trendyol-asure-12b` | 0.654 | 0.615 | 0.066 | 0.685 | 0.82 | 0.677 | 0.579 |
-| `gemma-4-e4b` | 0.642 | 0.605 | 0.056 | 0.720 | 0.88 | 0.660 | 0.579 |
-| `turkish-gemma-9b` | 0.615 | 0.577 | 0.079 | 0.652 | 0.99 | 0.656 | 0.547 |
-| `qwen3.5-4b` | 0.613 | 0.564 | 0.054 | 0.570 | 1.16 | 0.642 | 0.623 |
-| `eurollm-9b` | 0.578 | 0.509 | 0.073 | 0.565 | 1.23 | 0.590 | 0.527 |
-| `kizagan-e4b` | 0.565 | 0.523 | 0.056 | 0.514 | 1.24 | 0.574 | 0.496 |
-| `laya-multilingual` | 0.441 | 0.393 | 0.061 | 0.347 | 1.40 | 0.448 | 0.417 |
-| `kumru-2b` | 0.359 | 0.276 | 0.057 | 0.003 | 1.43 | 0.405 | 0.365 |
-| `mecellem-qwen3-4b` | 0.355 | 0.277 | 0.064 | 0.006 | 1.40 | 0.375 | 0.375 |
+| Model | Accuracy | Macro-F1 | Brier | ECE | Raw ECE | MASSIVE accuracy | Score MAE | Secondary accuracy | jev-bench-tr accuracy |
+|---|---|---|---|---|---|---|---|---|---|
+| `jev` | 0.776 | 0.748 | 0.300 | 0.063 | 0.085 | 0.788 | 0.86 | – | – |
+| `gemma-4-12b` | 0.759 | 0.728 | 0.326 | 0.054 | 0.192 | 0.777 | 0.82 | 0.678 | 0.637 |
+| `qwen3.5-35b-a3b` | 0.741 | 0.701 | 0.333 | 0.052 | 0.119 | 0.771 | 0.89 | 0.677 | 0.655 |
+| `qwen3.5-9b` | 0.706 | 0.665 | 0.375 | 0.057 | 0.124 | 0.691 | 1.03 | 0.630 | 0.626 |
+| `trendyol-asure-12b` | 0.702 | 0.666 | 0.365 | 0.069 | 0.140 | 0.685 | 0.89 | 0.604 | 0.579 |
+| `metask-jev-4b` | 0.697 | 0.654 | 0.391 | 0.067 | 0.201 | – | 0.98 | 0.607 | 0.654 |
+| `gemma-4-e4b` | 0.689 | 0.659 | 0.385 | 0.061 | 0.224 | 0.720 | 0.97 | 0.591 | 0.579 |
+| `turkish-gemma-9b` | 0.662 | 0.630 | 0.406 | 0.085 | 0.232 | 0.652 | 1.12 | 0.586 | 0.547 |
+| `qwen3.5-4b` | 0.659 | 0.615 | 0.428 | 0.059 | 0.134 | 0.570 | 1.35 | 0.582 | 0.623 |
+| `eurollm-9b` | 0.614 | 0.550 | 0.457 | 0.082 | 0.172 | 0.565 | 1.45 | 0.542 | 0.527 |
+| `kizagan-e4b` | 0.603 | 0.562 | 0.480 | 0.063 | 0.179 | 0.514 | 1.46 | 0.524 | 0.496 |
+| `laya-multilingual` | 0.459 | 0.413 | 0.592 | 0.062 | 0.254 | 0.347 | 1.67 | 0.424 | 0.417 |
+| `mecellem-qwen3-4b` | 0.370 | 0.293 | 0.651 | 0.064 | 0.108 | 0.006 | 1.67 | 0.357 | 0.375 |
+| `kumru-2b` | 0.360 | 0.278 | 0.647 | 0.057 | 0.084 | 0.003 | 1.69 | 0.393 | 0.365 |
+| always the most common label | 0.446 | – | – | – | – | 0.062 | – | 0.462 | 0.493 |
 
 Accuracy by area, over all the tasks of each area:
 
-| Model | routing | opinion | safety | fact_checking | judging | workflow | legal | politics | language | knowledge |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `jev` | 0.874 | 0.624 | 0.906 | 0.470 | 0.654 | 0.873 | 0.541 | 0.866 | 0.789 | 0.810 |
-| `gemma-4-12b` | 0.862 | 0.614 | 0.865 | 0.508 | 0.658 | 0.873 | 0.493 | 0.852 | 0.778 | 0.687 |
-| `qwen3.5-35b-a3b` | 0.858 | 0.598 | 0.822 | 0.459 | 0.624 | 0.860 | 0.564 | 0.858 | 0.759 | 0.735 |
-| `metask-jev-4b` | – | 0.536 | 0.914 | 0.507 | 0.622 | 0.789 | 0.432 | 0.740 | 0.681 | 0.583 |
-| `qwen3.5-9b` | 0.811 | 0.545 | 0.806 | 0.480 | 0.633 | 0.842 | 0.456 | 0.767 | 0.701 | 0.652 |
-| `trendyol-asure-12b` | 0.831 | 0.621 | 0.716 | 0.384 | 0.639 | 0.871 | 0.480 | 0.829 | 0.753 | 0.623 |
-| `gemma-4-e4b` | 0.832 | 0.591 | 0.817 | 0.406 | 0.592 | 0.861 | 0.481 | 0.800 | 0.691 | 0.583 |
-| `turkish-gemma-9b` | 0.813 | 0.584 | 0.557 | 0.373 | 0.610 | 0.860 | 0.454 | 0.863 | 0.688 | 0.621 |
-| `qwen3.5-4b` | 0.759 | 0.499 | 0.677 | 0.436 | 0.635 | 0.829 | 0.496 | 0.639 | 0.679 | 0.592 |
-| `eurollm-9b` | 0.750 | 0.520 | 0.712 | 0.385 | 0.547 | 0.842 | 0.531 | 0.734 | 0.601 | 0.448 |
-| `kizagan-e4b` | 0.739 | 0.463 | 0.712 | 0.350 | 0.594 | 0.762 | 0.471 | 0.655 | 0.639 | 0.438 |
-| `laya-multilingual` | 0.569 | 0.303 | 0.539 | 0.366 | 0.502 | 0.675 | 0.471 | 0.495 | 0.446 | 0.243 |
-| `kumru-2b` | 0.065 | 0.158 | 0.643 | 0.373 | 0.453 | 0.515 | 0.528 | 0.439 | 0.347 | 0.234 |
-| `mecellem-qwen3-4b` | 0.088 | 0.160 | 0.385 | 0.349 | 0.478 | 0.550 | 0.514 | 0.487 | 0.420 | 0.292 |
+| Model | routing | opinion | safety | fact_checking | judging | workflow | politics | language | knowledge |
+|---|---|---|---|---|---|---|---|---|---|
+| `jev` | 0.874 | 0.624 | 0.906 | 0.512 | 0.817 | 0.873 | 0.868 | 0.789 | 0.869 |
+| `gemma-4-12b` | 0.862 | 0.614 | 0.865 | 0.585 | 0.820 | 0.873 | 0.853 | 0.778 | 0.742 |
+| `qwen3.5-35b-a3b` | 0.858 | 0.598 | 0.822 | 0.529 | 0.762 | 0.860 | 0.860 | 0.759 | 0.793 |
+| `qwen3.5-9b` | 0.811 | 0.545 | 0.806 | 0.564 | 0.777 | 0.842 | 0.767 | 0.701 | 0.705 |
+| `trendyol-asure-12b` | 0.831 | 0.621 | 0.716 | 0.397 | 0.778 | 0.871 | 0.829 | 0.753 | 0.675 |
+| `metask-jev-4b` | – | 0.536 | 0.914 | 0.551 | 0.748 | 0.789 | 0.744 | 0.681 | 0.621 |
+| `gemma-4-e4b` | 0.832 | 0.591 | 0.817 | 0.444 | 0.720 | 0.861 | 0.802 | 0.691 | 0.630 |
+| `turkish-gemma-9b` | 0.813 | 0.584 | 0.557 | 0.423 | 0.729 | 0.860 | 0.865 | 0.688 | 0.672 |
+| `qwen3.5-4b` | 0.759 | 0.499 | 0.677 | 0.521 | 0.789 | 0.829 | 0.641 | 0.679 | 0.638 |
+| `eurollm-9b` | 0.750 | 0.520 | 0.712 | 0.430 | 0.651 | 0.842 | 0.736 | 0.601 | 0.479 |
+| `kizagan-e4b` | 0.739 | 0.463 | 0.712 | 0.388 | 0.726 | 0.762 | 0.653 | 0.639 | 0.462 |
+| `laya-multilingual` | 0.567 | 0.303 | 0.539 | 0.431 | 0.594 | 0.675 | 0.492 | 0.446 | 0.243 |
+| `mecellem-qwen3-4b` | 0.088 | 0.160 | 0.385 | 0.478 | 0.571 | 0.550 | 0.486 | 0.420 | 0.309 |
+| `kumru-2b` | 0.065 | 0.158 | 0.643 | 0.441 | 0.510 | 0.515 | 0.441 | 0.347 | 0.236 |
+| always the most common label | 0.152 | 0.283 | 0.762 | 0.635 | 0.618 | 0.502 | 0.549 | 0.373 | 0.262 |
 
-Jev is ahead on average, mostly on the knowledge tasks (TurkishMMLU 0.90 and Global-MMLU 0.85, against
-0.71 and 0.70 for Gemma 4 12B). Metask-Jev-4B is the best model on safety. Fact-checking is the hardest
-area for every model, and kumru-2b and mecellem-qwen3-4b score below always answering the most common
-label. The numbers for every task and question are in `results/scores.csv`.
+Jev is ahead on average, and almost all of its lead comes from the knowledge tasks (0.869 against 0.742
+for Gemma 4 12B); on the other 22 tasks the two score 0.763 and 0.761. Gaps of less than about two
+points are not reliable over 25 tasks. Before any temperature, Jev's probabilities are already close to
+calibrated (raw ECE 0.085), while every other model above 0.6 accuracy is overconfident (raw ECE
+0.12–0.23). hateday_tr, checkthat_tr and trclaim19_tr are imbalanced, so accuracy in safety and
+fact-checking mostly shows how often a model flags; in fact-checking every model is below always
+answering the most common label. By macro-F1, Jev leads safety (0.767, Gemma 4 12B 0.721, Metask-Jev-4B
+0.701) and Gemma 4 12B leads fact-checking (0.532, Qwen3.5 9B 0.499, Metask-Jev-4B 0.495, Jev 0.486).
+kumru-2b and mecellem-qwen3-4b score below always answering the most common label. Every task and
+question, with raw NLL and Brier, is in `results/scores.csv`.
 
 ## Item
 
@@ -163,24 +177,20 @@ raw 0–5 score in STSb.
 | offenseval_tr | safety | Noul | | 200 | 1000 | [OffensEval-2020 TR](https://coltekin.github.io/offensive-turkish/) | CC BY 2.0 |
 | sms_spam_tr | safety | Noul | | 200 | 1000 | [Turkish SMS Collection](https://www.kaggle.com/datasets/onurkarasoy/turkish-sms-collection) | unknown |
 | hateday_tr | safety | Choice | 3 | 200 | 10000 | [HateDay](https://huggingface.co/datasets/manueltonneau/hateday), Turkish random sample | gated, not stated |
-| xfact_tr | fact_checking | Choice | 5 | 111 | 169 | [X-FACT](https://github.com/utahnlp/x-fact), Doğruluk Payı | MIT |
 | xfact_teyit_tr | fact_checking | Choice | 4 | 61 | 552 | X-FACT out-of-domain, teyit.org | MIT |
-| mide22_tr | fact_checking | Choice | 3 | 200 | 1000 | [MiDe22](https://huggingface.co/datasets/ogozcelik/turkish-fake-news-detection) | MIT |
 | checkthat_tr | fact_checking | Noul ×3 | | 200 | 1000 | [CheckThat! 2022](https://gitlab.com/checkthat_lab/clef2022-checkthat-lab/clef2022-checkthat-lab) Turkish, subtasks 1A–1C | not stated |
 | trclaim19_tr | fact_checking | Noul | | 200 | 1000 | [TrClaim-19](https://huggingface.co/datasets/mcemilg/TrClaim19) | not stated |
 | seahorse_tr | judging | Noul ×6 | | 200 | 1000 | [SEAHORSE](https://huggingface.co/datasets/tasksource/seahorse_summarization_evaluation), Turkish raters | CC BY 4.0 |
 | webfaq_tr | judging | Noul | | 200 | 1000 | [WebFAQ](https://huggingface.co/datasets/mteb/WebFAQRetrieval) Turkish test queries | CC BY 4.0 |
-| turkishmmlu_difficulty_tr | judging | Score | 3 | 90 | 810 | [TurkishMMLU](https://huggingface.co/datasets/AYueksel/TurkishMMLU), share of students who answered correctly | not stated |
 | jev_noul_tr | workflow | Noul | | 200 | 1000 | [turkish_jev_noul](https://huggingface.co/datasets/ahmetege/turkish_jev_noul) | CC BY-SA 4.0 |
 | jev_noul_unseen_tr | workflow | Noul | | 100 | 900 | turkish_jev_noul, unseen-task split | CC BY-SA 4.0 |
-| aym_outcome_tr | legal | Noul | | 200 | 665 | [Constitutional Court individual applications](https://huggingface.co/datasets/icgcihan/Turkish_Constutional_Court_Decisions) | CC BY 4.0 |
 | touche_tr | politics | Noul + Choice | 2 | 200 | 1000 | [Touché 2024 ideology and power](https://zenodo.org/records/10450641), ParlaMint-TR speeches | CC BY 4.0 |
 | nli_tr | language | Choice | 3 | 200 | 1000 | [NLI-TR](https://github.com/boun-tabi/NLI-TR) MultiNLI-TR | MultiNLI terms |
 | stsb_tr | language | Score | 6 | 200 | 1000 | [STSb-TR](https://github.com/verimsu/STSb-TR) | unspecified |
 | belebele_tr | language | Choice | 4 | 90 | 810 | [Belebele](https://huggingface.co/datasets/facebook/belebele) tur_Latn | CC BY-SA 4.0 |
 | xcopa_tr | language | Choice | 2 | 100 | 500 | [XCOPA](https://huggingface.co/datasets/cambridgeltl/xcopa) tr | CC BY 4.0 |
 | turblimp_tr | language | Choice | 2 | 200 | 1000 | [TurBLiMP](https://huggingface.co/datasets/juletxara/turblimp) minimal pairs | CC BY 4.0 |
-| include_tr | knowledge | Choice | 4 | 20 | 548 | [INCLUDE](https://huggingface.co/datasets/CohereLabs/include-base-44), Turkish exams | Apache-2.0 |
+| include_tr | knowledge | Choice | 4 | 12 | 419 | [INCLUDE](https://huggingface.co/datasets/CohereLabs/include-base-44), Turkish exams, without the questions it repeats from TurkishMMLU | Apache-2.0 |
 | global_mmlu_tr | knowledge | Choice | 4 | 200 | 1000 | [Global-MMLU](https://huggingface.co/datasets/CohereLabs/Global-MMLU) tr, 500 culturally sensitive + 500 agnostic | Apache-2.0 |
 | turkishmmlu_tr | knowledge | Choice | 5 | 90 | 810 | [TurkishMMLU](https://huggingface.co/datasets/AYueksel/TurkishMMLU), public test | not stated |
 
@@ -189,15 +199,18 @@ to 200 items from the source's dev split and is meant for fitting a temperature 
 without a dev split give 10% of their test items to dev. A few questions appear in both a source's
 dev and test split.
 
-In X-FACT, evidence snippets from or about fact-checking sites are dropped because they give the
-verdict away.
+In X-FACT, evidence snippets from or about fact-checking sites, and snippets elsewhere that state a
+verdict ("...iddiası doğru değil"), are dropped because they give the verdict away. include_tr leaves
+out the 137 TurkishMMLU questions INCLUDE repeats with one option dropped, often the right one, and an
+answer key that disagrees with TurkishMMLU's; turkishmmlu_tr asks them properly.
 
 In the tweet tasks, user names are replaced with `@USER`. checkthat_tr takes its test tweets from
 CheckThat!'s test and dev-test sets. In webfaq_tr, half of the questions come with their own answer
-and half with the answer of the most similar other question, leaving out near-copies of the
-question. SEAHORSE stores its summaries JSON-escaped, so they are decoded first. aym_outcome_tr keeps
-the first 8,000 characters of each application; a true label means the Court found at least one
-violation, which we checked against the Court's decision database.
+and half with the answer of the most similar other question, leaving out near-copies of the question.
+SEAHORSE stores its summaries JSON-escaped, so they are decoded first; a few article and model pairs
+have two different summaries, and only the first one's ratings are used. aym_outcome_tr keeps the
+first 8,000 characters of each application; a true label means the Court found at least one violation,
+which we checked against the Court's decision database.
 
 hateday_tr tests on 10,000 tweets of HateDay's random sample, so hate (about 0.6%) and offence
 (about 4%) appear at their real rates; the engagement-weighted sample goes to rest. touche_tr keeps
@@ -209,8 +222,9 @@ correctly.
 
 ## Secondary tasks
 
-These are translated, synthetic or very small, so they are reported apart from the tasks above and
-left out of the area averages. They are listed in `SECONDARY` in `s1bench/tasks/__init__.py`.
+These are translated, synthetic or very small, or no model reads their label from the state, so they
+are reported apart from the tasks above and left out of the area averages. They are listed in
+`SECONDARY` in `s1bench/tasks/__init__.py`.
 
 | Task | Type | Dev | Test | Source | Why secondary | Licence |
 |---|---|---|---|---|---|---|
@@ -229,6 +243,10 @@ left out of the area averages. They are listed in `SECONDARY` in `s1bench/tasks/
 | neural_news_tr | Noul | 200 | 1000 | [Neural news benchmark](https://huggingface.co/datasets/tum-nlp/neural-news-benchmark), Turkish | half of the articles are generated | OpenRAIL++ |
 | tus21_tr | Choice | 46 | 419 | [TUS 2021](https://huggingface.co/datasets/zypchn/TUS21-exams) medical exam | small | not stated |
 | global_piqa_tr | Choice | 10 | 90 | [Global PIQA](https://huggingface.co/datasets/mrlbenchmarks/global-piqa-nonparallel) tur_latn | 100 items | CC BY-SA 4.0 |
+| xfact_tr | Choice | 111 | 169 | [X-FACT](https://github.com/utahnlp/x-fact), Doğruluk Payı | most claims turn on numbers or dates the state lacks; every model is near always answering the most common verdict | MIT |
+| mide22_tr | Choice | 200 | 1000 | [MiDe22](https://huggingface.co/datasets/ogozcelik/turkish-fake-news-detection) | labels are relative to the event a tweet was collected for, so debunking tweets count as true; every model is near the majority | MIT |
+| turkishmmlu_difficulty_tr | Score | 90 | 810 | [TurkishMMLU](https://huggingface.co/datasets/AYueksel/TurkishMMLU), share of students who answered correctly | the label describes one platform's students, not the question; every model is below the majority | not stated |
+| aym_outcome_tr | Noul | 200 | 665 | [Constitutional Court individual applications](https://huggingface.co/datasets/icgcihan/Turkish_Constutional_Court_Decisions) | the outcome cannot be read from the application; every model is at chance | CC BY 4.0 |
 
 In neural_news_tr the English prompt that was used to generate an article is turned back into its
 headline and lead, so the prompt itself does not give the answer away; what the models generated is
@@ -248,6 +266,13 @@ test for Jev.
 
 Laya, Verdict, Jev-Style-0.8B and Metask-Jev-4B were trained on MASSIVE, and some on XNLI or
 MultiNLI. Belebele, XCOPA and MMLU are old and widely used, so large LLMs have probably seen them.
-Models we train are kept away from everything in `data/`, rest included, with `s1bench.fingerprints`.
+Models we train never see a text from `data/`, rest included: `s1bench.fingerprints` and the training
+data's pull remove copies. They do train on other data from some of the same sources: TrGLUE's train
+split (jev_noul_tr's dev and test come from TrGLUE's validation and test sets) and its STS-B, Lavoir's
+seen workflows, WebFAQ questions from other sites, FACTurk fact-checks with the benchmark's claims
+removed, the Kemik news collection that TTC-4900 comes from, and reviews from the sites behind
+MusteriYorumlari and BuyukSinema. Their scores on jev_noul_tr, stsb_tr, lavoir_zeroshot_tr, webfaq_tr,
+xfact_teyit_tr, news_topic_tr, musteri_yorumlari_tr and buyuksinema_tr are in-distribution.
+turkish_jev_noul's train split holds every belebele_tr item with its answer.
 
 `data/` is not committed because several sources restrict redistribution; anyone can rebuild it.

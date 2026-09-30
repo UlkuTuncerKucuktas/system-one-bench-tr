@@ -47,8 +47,10 @@ def to_items(split_name):
             qid, question = QUESTIONS[r["question"]]
             summary = json.loads(f'"{r["summary"]}"')
             item = items.setdefault((r["gem_id"], r["model"]), {"state": {"makale": r["article"], "özet": summary}, "questions": {}, "gold": {}})
-            item["questions"][qid] = question
-            item["gold"][qid] = r["answer"] == "Yes"
+            # a few gem_id and model pairs have two different summaries; only the first one's ratings belong to the state
+            if item["state"]["özet"] == summary:
+                item["questions"][qid] = question
+                item["gold"][qid] = r["answer"] == "Yes"
     return list(items.values())
 
 
