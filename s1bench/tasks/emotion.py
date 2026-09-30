@@ -13,5 +13,6 @@ def build():
     items = [
         {"state": re.sub(r"@\w+", "@USER", text.strip()), "questions": {"emotion": QUESTION}, "gold": {"emotion": LABELS[label]}}
         for text, label in csv.reader(open(path, encoding="utf-8"))
+        if text.strip()
     ]
     return split(items)

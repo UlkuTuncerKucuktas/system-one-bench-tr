@@ -60,7 +60,7 @@ def macro_f1(data):
     return sum(f1) / len(f1)
 
 
-def metrics(dev, test):
+def metrics(dev, test, score):
     temperature = min(TEMPERATURES, key=lambda t: nll(dev, t))
     test = [(rescale(probs, temperature), gold, soft) for probs, gold, soft in test]
     row = {
@@ -72,7 +72,7 @@ def metrics(dev, test):
         "ece": ece(test),
         "temperature": temperature,
     }
-    if all(key.isdigit() for key in test[0][0]):
+    if score:
         row["mae"] = sum(abs(sum(int(k) * v for k, v in p.items()) - int(g)) for p, g, _ in test) / len(test)
     if test[0][2]:
         row["vote_distance"] = sum(sum(abs(p[k] - soft[k]) for k in p) / 2 for p, _, soft in test) / len(test)
@@ -84,8 +84,11 @@ def main():
     for model_dir in sorted(p for p in RESULTS.iterdir() if p.is_dir()):
         for task_dir in sorted(p for p in model_dir.iterdir() if (p / "test.jsonl").exists() and (p / "dev.jsonl").exists()):
             dev = answers(model_dir.name, task_dir.name, "dev")
+            pooled = [row for rows in dev.values() for row in rows]
+            scores = {qid for item in read(DATA / task_dir.name / "test.jsonl") for qid, q in item["questions"].items() if q["type"] == "score"}
             for qid, test in answers(model_dir.name, task_dir.name, "test").items():
-                rows.append({"model": model_dir.name, "task": task_dir.name, "question": qid, **metrics(dev[qid], test)})
+                # some bev_tr questions have no dev items; they get the temperature of the whole task
+                rows.append({"model": model_dir.name, "task": task_dir.name, "question": qid, **metrics(dev.get(qid, pooled), test, qid in scores)})
 
     with open(RESULTS / "scores.csv", "w", newline="") as f:
         fieldnames = ["model", "task", "question", "n", "accuracy", "majority", "macro_f1", "brier", "ece", "mae", "vote_distance", "temperature"]

@@ -61,10 +61,12 @@ class LLM:
         ]
 
     def predict(self, items):
+        # a question with more options than letters is skipped, as Metask skips more than 26
         jobs = [
             (item, qid, options)
             for item in items
             for qid, question in item["questions"].items()
+            if len(question["criteria"]) <= len(LABELS)
             for options in orders_of(question)
         ]
         texts = [self.prompt(render(item, item["questions"][qid], options)) for item, qid, options in jobs]
@@ -82,6 +84,6 @@ class LLM:
             for (key, _), p in zip(options, probs):
                 votes[key] = votes.get(key, 0) + p
         return [
-            {qid: {key: v / sum(votes.values()) for key, v in votes.items()} for qid, votes in sums[item["id"]].items()}
+            {qid: {key: v / sum(votes.values()) for key, v in votes.items()} for qid, votes in sums.get(item["id"], {}).items()}
             for item in items
         ]

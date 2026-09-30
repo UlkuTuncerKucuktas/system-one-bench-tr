@@ -7,7 +7,7 @@ from .build import DATA
 
 def words(text):
     text = text.replace("İ", "i").replace("I", "ı").lower()
-    return re.findall(r"\w+", re.sub(r"https?://\S+|@\w+", " ", text))
+    return re.findall(r"[^\W_]+", re.sub(r"https?://\S+|@\w+", " ", text))
 
 
 def fingerprint(words):

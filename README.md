@@ -35,7 +35,8 @@ its probabilities to `results/<model>/<task>/`. `score` fits one temperature per
 question on dev, then writes one row per question to `results/scores.csv`: accuracy, Brier score,
 calibration error (ECE), for Score questions the mean absolute error of the expected level, and,
 where annotators' votes are known, `vote_distance`, the total variation distance between the model's
-probabilities and the votes. It also prints accuracy averaged over the tasks of each area; the
+probabilities and the votes. A question without dev items (a few in bev_tr) gets the temperature
+fitted on the whole task. It also prints accuracy averaged over the tasks of each area; the
 secondary tasks are left out of those averages.
 
 Models are listed in `s1bench/models.py`:
@@ -43,9 +44,16 @@ Models are listed in `s1bench/models.py`:
 - Ordinary LLMs see the state, the question and lettered options, and we read the probability of
   each letter as the next token in one forward pass, with thinking turned off. Choice and Noul
   questions are asked twice with the options in reverse order and the two answers are averaged.
-- Metask-Jev-4B uses its own prompt format and handles at most 26 options, so it skips MASSIVE.
+  The letters are A–Z, a–z and 0–9, so a question with more than 62 options is skipped (banking77,
+  clinc150 and ledgar in jev-bench-tr).
+- Metask-Jev-4B uses its own prompt format and handles at most 26 options, so besides those it skips
+  MASSIVE and jev-bench-tr's MASSIVE and GoEmotions. It reads prompts of up to 32,768 tokens, since
+  the other models read the whole state too.
 - Laya uses its multilingual checkpoint.
 - Jev needs your key in `TYPESAFE_API_KEY`.
+- Jev and Laya get one question per request, like the LLMs. Sending an item's questions together
+  would give labels away: seahorse_tr asks its other five questions only when the raters understood
+  the summary.
 
 ## Keeping training data out of the benchmark
 
@@ -56,30 +64,59 @@ python -m s1bench.fingerprints
 This writes `data/fingerprints.txt`: a hash of every 8-word window of every dev and test text, and a
 hash of every whole text in `rest.jsonl`. Models we train never see a text that copies the benchmark:
 one whose whole text matches a hash in that file (for texts of four words or more), half of whose
-8-word windows are in it, or that has 10 windows in it in a row (17 words). A few scattered shared
-windows do not count, because they are common phrases such as law names ("5271 sayılı Ceza
-Muhakemesi Kanunu"), and very short texts such as "tamam" appear everywhere.
+8-word windows are in it, or that has 10 windows in it in a row (17 words) making up a fifth of the
+text. Each text of an item is checked, and so are all of them joined, since a benchmark text can be
+split over several fields. Scattered shared windows and runs inside long texts do not count, because
+they are common phrases and quoted laws ("5271 sayılı Ceza Muhakemesi Kanunu"), and very short texts
+such as "tamam" appear everywhere.
 
 ## Results
 
-| Model | Accuracy (12 tasks) | Macro-F1 (12 tasks) | ECE (12 tasks) | MASSIVE accuracy | Score MAE |
-|---|---|---|---|---|---|
-| `jev` | 0.725 | 0.708 | 0.084 | 0.788 | 0.86 |
-| `gemma-4-12b` | 0.709 | 0.687 | 0.059 | 0.777 | 0.82 |
-| `qwen3.5-35b-a3b` | 0.701 | 0.665 | 0.056 | 0.771 | 0.89 |
-| `trendyol-asure-12b` | 0.675 | 0.653 | 0.060 | 0.685 | 0.89 |
-| `qwen3.5-9b` | 0.662 | 0.626 | 0.058 | 0.691 | 1.03 |
-| `gemma-4-e4b` | 0.655 | 0.635 | 0.063 | 0.720 | 0.97 |
-| `turkish-gemma-9b` | 0.644 | 0.616 | 0.073 | 0.652 | 1.12 |
-| `metask-jev-4b` | 0.630 | 0.593 | 0.079 | – | 0.98 |
-| `qwen3.5-4b` | 0.616 | 0.576 | 0.058 | 0.570 | 1.35 |
-| `eurollm-9b` | 0.583 | 0.546 | 0.067 | 0.565 | 1.45 |
-| `kizagan-e4b` | 0.562 | 0.535 | 0.048 | 0.514 | 1.46 |
-| `laya-multilingual` | 0.413 | 0.377 | 0.052 | 0.347 | 1.67 |
-| `mecellem-qwen3-4b` | 0.382 | 0.304 | 0.056 | 0.006 | 1.67 |
-| `kumru-2b` | 0.332 | 0.263 | 0.037 | 0.003 | 1.69 |
+Accuracy, macro-F1 and ECE average the 29 area tasks that every model answered (all but MASSIVE, which
+Metask skips); each task counts once, with its questions averaged. Score MAE averages the four Score
+tasks. The last two columns average the 14 secondary tasks outside jev-bench-tr and the 17
+jev-bench-tr tasks that every LLM and Metask answered. Jev was run on the area tasks only.
 
-These numbers cover the first 14 tasks. The tasks added later have not been run yet.
+| Model | Accuracy | Macro-F1 | ECE | MASSIVE accuracy | Score MAE | Secondary accuracy | jev-bench-tr accuracy |
+|---|---|---|---|---|---|---|---|
+| `jev` | 0.720 | 0.688 | 0.068 | 0.788 | 0.79 | – | – |
+| `gemma-4-12b` | 0.704 | 0.668 | 0.053 | 0.777 | 0.77 | 0.759 | 0.637 |
+| `qwen3.5-35b-a3b` | 0.689 | 0.647 | 0.050 | 0.771 | 0.81 | 0.754 | 0.655 |
+| `metask-jev-4b` | 0.655 | 0.610 | 0.066 | – | 0.88 | 0.661 | 0.654 |
+| `qwen3.5-9b` | 0.655 | 0.608 | 0.054 | 0.691 | 0.92 | 0.704 | 0.626 |
+| `trendyol-asure-12b` | 0.654 | 0.615 | 0.066 | 0.685 | 0.82 | 0.677 | 0.579 |
+| `gemma-4-e4b` | 0.642 | 0.605 | 0.056 | 0.720 | 0.88 | 0.660 | 0.579 |
+| `turkish-gemma-9b` | 0.615 | 0.577 | 0.079 | 0.652 | 0.99 | 0.656 | 0.547 |
+| `qwen3.5-4b` | 0.613 | 0.564 | 0.054 | 0.570 | 1.16 | 0.642 | 0.623 |
+| `eurollm-9b` | 0.578 | 0.509 | 0.073 | 0.565 | 1.23 | 0.590 | 0.527 |
+| `kizagan-e4b` | 0.565 | 0.523 | 0.056 | 0.514 | 1.24 | 0.574 | 0.496 |
+| `laya-multilingual` | 0.441 | 0.393 | 0.061 | 0.347 | 1.40 | 0.448 | 0.417 |
+| `kumru-2b` | 0.359 | 0.276 | 0.057 | 0.003 | 1.43 | 0.405 | 0.365 |
+| `mecellem-qwen3-4b` | 0.355 | 0.277 | 0.064 | 0.006 | 1.40 | 0.375 | 0.375 |
+
+Accuracy by area, over all the tasks of each area:
+
+| Model | routing | opinion | safety | fact_checking | judging | workflow | legal | politics | language | knowledge |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `jev` | 0.874 | 0.624 | 0.906 | 0.470 | 0.654 | 0.873 | 0.541 | 0.866 | 0.789 | 0.810 |
+| `gemma-4-12b` | 0.862 | 0.614 | 0.865 | 0.508 | 0.658 | 0.873 | 0.493 | 0.852 | 0.778 | 0.687 |
+| `qwen3.5-35b-a3b` | 0.858 | 0.598 | 0.822 | 0.459 | 0.624 | 0.860 | 0.564 | 0.858 | 0.759 | 0.735 |
+| `metask-jev-4b` | – | 0.536 | 0.914 | 0.507 | 0.622 | 0.789 | 0.432 | 0.740 | 0.681 | 0.583 |
+| `qwen3.5-9b` | 0.811 | 0.545 | 0.806 | 0.480 | 0.633 | 0.842 | 0.456 | 0.767 | 0.701 | 0.652 |
+| `trendyol-asure-12b` | 0.831 | 0.621 | 0.716 | 0.384 | 0.639 | 0.871 | 0.480 | 0.829 | 0.753 | 0.623 |
+| `gemma-4-e4b` | 0.832 | 0.591 | 0.817 | 0.406 | 0.592 | 0.861 | 0.481 | 0.800 | 0.691 | 0.583 |
+| `turkish-gemma-9b` | 0.813 | 0.584 | 0.557 | 0.373 | 0.610 | 0.860 | 0.454 | 0.863 | 0.688 | 0.621 |
+| `qwen3.5-4b` | 0.759 | 0.499 | 0.677 | 0.436 | 0.635 | 0.829 | 0.496 | 0.639 | 0.679 | 0.592 |
+| `eurollm-9b` | 0.750 | 0.520 | 0.712 | 0.385 | 0.547 | 0.842 | 0.531 | 0.734 | 0.601 | 0.448 |
+| `kizagan-e4b` | 0.739 | 0.463 | 0.712 | 0.350 | 0.594 | 0.762 | 0.471 | 0.655 | 0.639 | 0.438 |
+| `laya-multilingual` | 0.569 | 0.303 | 0.539 | 0.366 | 0.502 | 0.675 | 0.471 | 0.495 | 0.446 | 0.243 |
+| `kumru-2b` | 0.065 | 0.158 | 0.643 | 0.373 | 0.453 | 0.515 | 0.528 | 0.439 | 0.347 | 0.234 |
+| `mecellem-qwen3-4b` | 0.088 | 0.160 | 0.385 | 0.349 | 0.478 | 0.550 | 0.514 | 0.487 | 0.420 | 0.292 |
+
+Jev is ahead on average, mostly on the knowledge tasks (TurkishMMLU 0.90 and Global-MMLU 0.85, against
+0.71 and 0.70 for Gemma 4 12B). Metask-Jev-4B is the best model on safety. Fact-checking is the hardest
+area for every model, and kumru-2b and mecellem-qwen3-4b score below always answering the most common
+label. The numbers for every task and question are in `results/scores.csv`.
 
 ## Item
 

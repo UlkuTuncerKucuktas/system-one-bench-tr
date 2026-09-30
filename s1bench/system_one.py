@@ -21,21 +21,28 @@ class Jev:
         self.client = httpx.Client(headers={"Authorization": f"Bearer {os.environ['TYPESAFE_API_KEY']}"}, timeout=60)
 
     def predict(self, items):
+        # one question per request, as for the other models: which questions an item has can depend on its labels
+        jobs = [(item, qid) for item in items for qid in item["questions"]]
         with ThreadPoolExecutor(16) as pool:
-            return list(pool.map(self.ask, items))
+            answers = list(pool.map(self.ask, jobs))
+        predictions = {item["id"]: {} for item in items}
+        for (item, qid), answer in zip(jobs, answers):
+            predictions[item["id"]][qid] = answer
+        return [predictions[item["id"]] for item in items]
 
-    def ask(self, item):
-        body = {"model": "jev-latest", "state": item["state"], "questions": item["questions"]}
+    def ask(self, job):
+        item, qid = job
+        body = {"model": "jev-latest", "state": item["state"], "questions": {qid: item["questions"][qid]}}
         for attempt in range(6):
             try:
                 response = self.client.post("https://api.typesafe.ai/v1/systemone", json=body)
                 if response.status_code != 429 and response.status_code < 500:
                     response.raise_for_status()
-                    return {qid: answer_probabilities(answer) for qid, answer in response.json()["answers"].items()}
+                    return answer_probabilities(response.json()["answers"][qid])
             except httpx.TransportError:
                 pass
             time.sleep(2**attempt)
-        raise RuntimeError(f"Jev kept failing on {item['id']}")
+        raise RuntimeError(f"Jev kept failing on {item['id']} {qid}")
 
 
 class Laya:
@@ -45,11 +52,10 @@ class Laya:
         self.agent = laya.load("convaiinnovations/laya", subfolder="multilingual")
 
     def predict(self, items):
-        predictions = []
-        for item in items:
-            answers = self.agent.predict(item["state"], item["questions"])["answers"]
-            predictions.append({qid: answer_probabilities(answer) for qid, answer in answers.items()})
-        return predictions
+        return [
+            {qid: answer_probabilities(self.agent.predict(item["state"], {qid: q})["answers"][qid]) for qid, q in item["questions"].items()}
+            for item in items
+        ]
 
 
 class Metask:
@@ -78,7 +84,8 @@ class Metask:
         field["description"] = question["instructions"]
 
         context = state if isinstance(state, str) else json.dumps(state, ensure_ascii=False)
-        prepared = prepare_prompts(self.tokenizer, context, {"decision": field}, max_input_tokens=4096)
+        # the other models read the whole state, so Metask does too instead of refusing prompts over 4,096 tokens
+        prepared = prepare_prompts(self.tokenizer, context, {"decision": field}, max_input_tokens=32768)
         ids = torch.tensor([prepared.full_ids[0]], device="cuda")
         logits = self.model(input_ids=ids, use_cache=False, logits_to_keep=1).logits[0, -1].float()
         probs = logits[prepared.candidate_ids[0]].softmax(-1).tolist()
