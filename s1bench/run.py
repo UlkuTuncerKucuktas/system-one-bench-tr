@@ -2,13 +2,21 @@ import time
 from pathlib import Path
 
 from . import DATA, RESULTS, read, save
-from .jev import Jev
+from .api import jev, openrouter
 from .llm import LLM
 from .tasks import TASKS
 
 
+def model_for(address):
+    if address == "jev":
+        return jev()
+    if address.startswith("openrouter/"):
+        return openrouter(address.removeprefix("openrouter/"))
+    return LLM(address)
+
+
 def run(address, *tasks):
-    model = Jev() if address == "jev" else LLM(address)
+    model = model_for(address)
     name = Path(address).name
     for task in tasks or TASKS:
         for split in ["dev", "test"]:

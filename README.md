@@ -14,8 +14,8 @@ fields) and one or more questions, each of one kind:
 - **Score**: a level on an ordered scale, each level described.
 
 General language models can be asked in the same way. We did not find a Turkish benchmark for this setting, so we built
-one to compare Jev, open models and our own fine-tuned models on the same requests. Because the answers are
-probabilities, the benchmark reports calibration as well as accuracy.
+one to compare Jev, Microsoft-Decision-1, open models and our own fine-tuned models on the same requests. Because the
+answers are probabilities, the benchmark reports calibration as well as accuracy.
 
 ## Tasks
 
@@ -50,8 +50,9 @@ Test split. Accuracy (%) on the 25 main tasks and by area, raw log-loss on the m
 
 | Model | Accuracy | Raw log-loss | Routing | Opinion | Safety | Fact-checking | Judging | Workflow | Politics | Language | Knowledge |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| Jev | 77.6 | 0.82 | 87.4 | 62.4 | 90.6 | 51.2 | 81.7 | 87.3 | 86.8 | 78.9 | 86.9 |
+| Jev | 77.6 | 0.81 | 87.4 | 62.4 | 90.6 | 51.2 | 81.7 | 87.3 | 86.8 | 78.9 | 86.9 |
 | vistalab-system-one-12b | 77.6 | 0.59 | 88.8 | 65.0 | 92.9 | 54.5 | 83.3 | 89.3 | 82.0 | 80.4 | 74.1 |
+| Microsoft-Decision-1 | 77.0 | 0.63 | 91.0 | 63.4 | 90.5 | 51.9 | 80.7 | 87.1 | 84.6 | 81.9 | 77.3 |
 | Gemma 4 12B | 75.9 | 1.85 | 86.2 | 61.4 | 86.5 | 58.5 | 82.0 | 87.3 | 85.3 | 77.8 | 74.2 |
 | vistalab-system-one-e4b | 75.4 | 0.62 | 87.8 | 63.3 | 92.1 | 57.5 | 79.5 | 89.7 | 76.6 | 76.3 | 66.4 |
 | Qwen3.5 35B-A3B | 74.1 | 0.75 | 85.8 | 59.8 | 82.2 | 52.9 | 76.2 | 86.0 | 86.0 | 75.9 | 79.3 |
@@ -68,6 +69,8 @@ Test split. Accuracy (%) on the 25 main tasks and by area, raw log-loss on the m
 | Kumru 2B | 36.0 | 1.39 | 6.5 | 15.8 | 64.3 | 44.1 | 51.0 | 51.5 | 44.1 | 34.7 | 23.6 |
 
 - Jev was evaluated through TypeSafe's API. Metask cannot answer MASSIVE, so it has no routing score.
+- Microsoft-Decision-1 was evaluated through OpenRouter's Decisions API, which served it from Microsoft's Azure
+  deployment. Microsoft post-trained it from Qwen3.5 9B and describes it as optimized for English.
 - The two vistalab-system-one models are ours. They were not trained on any benchmark question. For a few tasks they
   were trained on other splits of the same datasets (the training splits of TrGLUE, whose validation and test splits
   make up the workflow tasks, and of Lavoir) or on other texts from the same sources (other WebFAQ sites, fact-check
@@ -78,10 +81,11 @@ Test split. Accuracy (%) on the 25 main tasks and by area, raw log-loss on the m
 
 ```bash
 pip install -e .
-s1bench build                       # download and build the 66 tasks
-s1bench run google/gemma-4-12b-it   # a Hugging Face model, a local folder or a PEFT adapter, on one GPU
-s1bench run jev                     # Jev through TypeSafe's API
-s1bench score                       # write results/scores.csv and print the tables
+s1bench build                                          # download and build the 66 tasks
+s1bench run google/gemma-4-12b-it                      # a Hugging Face model, a local folder or a PEFT adapter, on one GPU
+s1bench run jev                                        # Jev through TypeSafe's API
+s1bench run openrouter/microsoft/microsoft-decision-1  # a decision model through OpenRouter's Decisions API
+s1bench score                                          # write results/scores.csv and print the tables
 ```
 
 What `s1bench build` and `s1bench run` need:
@@ -93,6 +97,8 @@ What `s1bench build` and `s1bench run` need:
 - **Other sources:** some tasks download files from GitHub, GitLab, Zenodo and the NLI-TR and OffensEval pages, without
   an account.
 - **Jev:** `s1bench run jev` needs a TypeSafe API key in `TYPESAFE_API_KEY`.
+- **OpenRouter:** `s1bench run openrouter/<model>` runs a decision model such as Microsoft-Decision-1 through
+  OpenRouter's Decisions API. It needs an OpenRouter API key in `OPENROUTER_API_KEY` and credit on the account.
 - **GPU:** local models run on one CUDA GPU in bfloat16.
 
 ## Adding a task
