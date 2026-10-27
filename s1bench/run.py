@@ -4,6 +4,7 @@ from pathlib import Path
 from . import DATA, RESULTS, read, save
 from .api import jev, openrouter
 from .llm import LLM
+from .local import karar, tau
 from .tasks import TASKS
 
 
@@ -12,6 +13,10 @@ def model_for(address):
         return jev()
     if address.startswith("openrouter/"):
         return openrouter(address.removeprefix("openrouter/"))
+    if address == "ufakai/ufakzeka-karar":
+        return karar()
+    if address == "cisimcik/tau-4b":
+        return tau()
     return LLM(address)
 
 
