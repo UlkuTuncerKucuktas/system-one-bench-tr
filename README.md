@@ -13,9 +13,10 @@ fields) and one or more questions, each of one kind:
 - **Noul**: yes or no, with a criterion for each.
 - **Score**: a level on an ordered scale, each level described.
 
-General language models can be asked in the same way. We did not find a Turkish benchmark for this setting, so we built
-one to compare Jev, Microsoft-Decision-1, open models and our own fine-tuned models on the same requests. Because the
-answers are probabilities, the benchmark reports calibration as well as accuracy.
+General language models can be asked in the same way. We built this benchmark to compare Jev, Microsoft-Decision-1, open
+models and our own fine-tuned models on the same requests. Because the answers are probabilities, the benchmark reports
+calibration as well as accuracy. HakemBench [1], released at about the same time, is another Turkish benchmark in this
+format.
 
 ## Tasks
 
@@ -73,7 +74,7 @@ Test split. Accuracy (%) on the 25 main tasks and by area, raw log-loss on the m
 - Jev was evaluated through TypeSafe's API. Metask cannot answer MASSIVE, so it has no routing score.
 - Microsoft-Decision-1 was evaluated through OpenRouter's Decisions API, which served it from Microsoft's Azure
   deployment. Microsoft post-trained it from Qwen3.5 9B and describes it as optimized for English.
-- tau-4b (Cisimcik AI Lab) and ufakzeka-karar (ufak AI) are open Turkish decision models. They were run on one GPU
+- tau-4b (Cisimcik AI Lab) and ufakzeka-karar (ufak AI) [2] are open Turkish decision models. They were run on one GPU
   through their own `decide()` functions, one question per request as for Jev, and answered every question. tau-4b's
   probabilities are read before `decide()` rounds them to four decimals. Both were trained on Turkish classification
   data that may overlap with the benchmark's sources: ufakzeka-karar's model card lists MASSIVE, OffensEval 2020,
@@ -162,3 +163,11 @@ A task is a function that downloads a dataset and returns its splits as lists of
    ```
 
 The task data keep the licences of their original sources.
+
+## References
+
+1. S. F. Teke. HakemBench: A Turkish Benchmark of Typed Decisions. arXiv:2610.02293, 2026.
+   [Paper](https://arxiv.org/abs/2610.02293), [dataset](https://huggingface.co/datasets/ufakai/HakemBench).
+2. S. F. Teke. ufakzeka-karar: An Open Turkish Typed-Decision Model with Order-Invariant Option Scoring.
+   arXiv:2610.06744, 2026. [Paper](https://arxiv.org/abs/2610.06744),
+   [model](https://huggingface.co/ufakai/ufakzeka-karar).
