@@ -58,6 +58,7 @@ Test split. Accuracy (%) on the 25 main tasks and by area, raw log-loss on the m
 | Gemma 4 12B | 75.9 | 1.85 | 86.2 | 61.4 | 86.5 | 58.5 | 82.0 | 87.3 | 85.3 | 77.8 | 74.2 |
 | vistalab-system-one-e4b | 75.4 | 0.62 | 87.8 | 63.3 | 92.1 | 57.5 | 79.5 | 89.7 | 76.6 | 76.3 | 66.4 |
 | Qwen3.5 35B-A3B | 74.1 | 0.75 | 85.8 | 59.8 | 82.2 | 52.9 | 76.2 | 86.0 | 86.0 | 75.9 | 79.3 |
+| turnike-jev-4b | 71.9 | 0.68 | 88.3 | 59.4 | 90.1 | 50.4 | 77.7 | 87.3 | 71.5 | 73.4 | 61.9 |
 | Qwen3.5 9B | 70.6 | 0.80 | 81.1 | 54.5 | 80.6 | 56.4 | 77.7 | 84.2 | 76.7 | 70.1 | 70.5 |
 | Trendyol LLM Asure 12B | 70.2 | 0.84 | 83.1 | 62.1 | 71.6 | 39.7 | 77.8 | 87.1 | 82.9 | 75.3 | 67.5 |
 | Metask Jev 4B | 69.7 | 1.03 | – | 53.6 | 91.4 | 55.1 | 74.8 | 78.9 | 74.4 | 68.1 | 62.1 |
@@ -75,11 +76,13 @@ Test split. Accuracy (%) on the 25 main tasks and by area, raw log-loss on the m
 - Microsoft-Decision-1 was evaluated through OpenRouter's Decisions API, which served it from Microsoft's Azure
   deployment. Microsoft post-trained it from Qwen3.5 9B and describes it as optimized for English.
 - tau-4b (Cisimcik AI Lab) and ufakzeka-karar (ufak AI) [2] are open Turkish decision models. They were run on one GPU
-  through their own `decide()` functions, one question per request as for Jev, and answered every question. tau-4b's
-  probabilities are read before `decide()` rounds them to four decimals. Both were trained on Turkish classification
-  data that may overlap with the benchmark's sources: ufakzeka-karar's model card lists MASSIVE, OffensEval 2020,
-  MiDe22, FACTurk and WebFAQ among its training sets, and tau-4b's card describes its training data only in general
-  terms.
+  through their own code, one question per request as for Jev, and answered every question. tau-4b's probabilities are
+  read before its code rounds them to four decimals. Both were trained on Turkish classification data that may overlap
+  with the benchmark's sources: ufakzeka-karar's model card lists MASSIVE, OffensEval 2020, MiDe22, FACTurk and WebFAQ
+  among its training sets, and tau-4b's card describes its training data only in general terms.
+- turnike-jev-4b is an open decision model built on Qwen3.5 4B. It was run in the same way and answered every question.
+  Its model card says it was trained on the training splits of 16 of the 22 jev-bench tasks, whose test splits make up
+  jev-bench-tr, and of five Turkish datasets it does not name, and that test sets were used to choose the model.
 - The two vistalab-system-one models are ours. They were not trained on any benchmark question. For a few tasks they
   were trained on other splits of the same datasets (the training splits of TrGLUE, whose validation and test splits
   make up the workflow tasks, and of Lavoir) or on other texts from the same sources (other WebFAQ sites, fact-check
@@ -96,6 +99,7 @@ s1bench run jev                                        # Jev through TypeSafe's 
 s1bench run openrouter/microsoft/microsoft-decision-1  # a decision model through OpenRouter's Decisions API
 s1bench run cisimcik/tau-4b                            # an open decision model from Hugging Face, on one GPU
 s1bench run ufakai/ufakzeka-karar                      # an open decision model from Hugging Face, on one GPU
+s1bench run berkay123001/turnike-jev-4b                # an open decision model from Hugging Face, on one GPU
 s1bench score                                          # write results/scores.csv and print the tables
 ```
 
@@ -110,9 +114,9 @@ What `s1bench build` and `s1bench run` need:
 - **Jev:** `s1bench run jev` needs a TypeSafe API key in `TYPESAFE_API_KEY`.
 - **OpenRouter:** `s1bench run openrouter/<model>` runs a decision model such as Microsoft-Decision-1 through
   OpenRouter's Decisions API. It needs an OpenRouter API key in `OPENROUTER_API_KEY` and credit on the account.
-- **Open decision models:** `s1bench run cisimcik/tau-4b` and `s1bench run ufakai/ufakzeka-karar` download the models
-  from Hugging Face without a token and run code from their repositories: tau-4b's model code through
-  `trust_remote_code`, and ufakzeka-karar's `karar.py`.
+- **Open decision models:** `s1bench run cisimcik/tau-4b`, `s1bench run ufakai/ufakzeka-karar` and
+  `s1bench run berkay123001/turnike-jev-4b` download the models from Hugging Face without a token and run code from
+  their repositories.
 - **GPU:** local models run on one CUDA GPU in bfloat16; ufakzeka-karar runs in float32.
 
 ## Adding a task

@@ -4,7 +4,7 @@ from pathlib import Path
 from . import DATA, RESULTS, read, save
 from .api import jev, openrouter
 from .llm import LLM
-from .local import karar, tau
+from .local import Turnike, karar, tau
 from .tasks import TASKS
 
 
@@ -17,6 +17,8 @@ def model_for(address):
         return karar()
     if address == "cisimcik/tau-4b":
         return tau()
+    if address == "berkay123001/turnike-jev-4b":
+        return Turnike()
     return LLM(address)
 
 
