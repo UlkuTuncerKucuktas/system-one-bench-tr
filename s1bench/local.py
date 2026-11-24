@@ -3,9 +3,10 @@ import sys
 
 import torch
 from huggingface_hub import snapshot_download
-from transformers import AutoModel
+from transformers import AutoModel, AutoTokenizer
 
 from .api import answer_probabilities
+from .prompt import options_of
 
 
 class LocalDecider:
@@ -40,6 +41,54 @@ def tau():
     # decide() rounds probabilities to four decimals; read them unrounded, as for the other open models
     sys.modules[type(model).__module__.replace("modeling_tau", "tau_schema")].round = lambda value, digits=None: value
     return LocalDecider(model.decide)
+
+
+def d3_folder():
+    return snapshot_download("vllm-sr/d3", revision="62f07e54c6c3a5ff5f695107377edc43e1a86ea8")
+
+
+def d3():
+    model = AutoModel.from_pretrained(d3_folder(), trust_remote_code=True, dtype=torch.bfloat16, device="cuda:0")
+    return LocalDecider(lambda state, questions: model.system_one(state=state, questions=questions))
+
+
+def pusula():
+    from pusula.inference import D3Engine
+
+    adapter = snapshot_download("erenextlabs/pusula", revision="dfe77ba366c2a09049e118017c8f294f73a94634")
+    # as released, Pusula answers a question outside its own templates with d3 alone; own_base=False keeps its adapter on
+    engine = D3Engine.load(d3_folder(), adapter=adapter, device="cuda:0", load_in_4bit=False, own_base=False)
+
+    def decide(state, questions):
+        # the engine takes the text as a string; d3's own code turns a record into the same JSON
+        state = state if isinstance(state, str) else json.dumps(state, ensure_ascii=False)
+        return {"answers": engine.decide(state, questions)}
+
+    return LocalDecider(decide)
+
+
+def laya_tr():
+    folder = snapshot_download("TurkishCodeMan/laya-tr", revision="6b96146402db87d94148a68bfaf1a11b1a5e2fdf")
+    tokenizer = AutoTokenizer.from_pretrained(folder, trust_remote_code=False)
+    model = AutoModel.from_pretrained(folder, trust_remote_code=True).to("cuda").eval()
+    # the rotary frequencies are not in the checkpoint, and transformers 5 leaves them unset; set them as the model's code does
+    rotary = model.encoder.rotary_emb
+    rotary.inv_freq = 1.0 / (rotary.theta ** (torch.arange(0, rotary.dim, 2, dtype=torch.float32, device="cuda") / rotary.dim))
+    # decide() rounds probabilities to four decimals; read them unrounded, as for the other open models
+    sys.modules[type(model).__module__].round = lambda value, digits=None: value
+
+    def decide(state, questions):
+        (qid, question), = questions.items()
+        options = options_of(question)
+        # decide() takes one question, its options as a list of texts, and the text as a string
+        context = state if isinstance(state, str) else json.dumps(state, ensure_ascii=False, indent=2)
+        out = model.decide(question=question["instructions"], options=[text for _, text in options], tokenizer=tokenizer, context=context)
+        probs = dict(zip([key for key, _ in options], out["probabilities"].values()))
+        if question["type"] == "noul":
+            return {"answers": {qid: {"type": "noul", "noul": probs["true"]}}}
+        return {"answers": {qid: {"type": question["type"], "probabilities": probs}}}
+
+    return LocalDecider(decide)
 
 
 class Turnike:

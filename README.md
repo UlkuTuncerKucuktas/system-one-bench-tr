@@ -51,6 +51,8 @@ Test split. Accuracy (%) on the 25 main tasks and by area, raw log-loss on the m
 
 | Model | Accuracy | Raw log-loss | Routing | Opinion | Safety | Fact-checking | Judging | Workflow | Politics | Language | Knowledge |
 |---|---|---|---|---|---|---|---|---|---|---|---|
+| d3 | 81.6 | 0.46 | 91.8 | 66.3 | 92.5 | 63.1 | 86.3 | 88.9 | 90.7 | 84.6 | 84.7 |
+| Pusula 2.0 | 81.1 | 0.52 | 91.9 | 67.0 | 93.0 | 59.1 | 85.6 | 88.8 | 90.8 | 84.2 | 84.2 |
 | Jev | 77.6 | 0.81 | 87.4 | 62.4 | 90.6 | 51.2 | 81.7 | 87.3 | 86.8 | 78.9 | 86.9 |
 | vistalab-system-one-12b | 77.6 | 0.59 | 88.8 | 65.0 | 92.9 | 54.5 | 83.3 | 89.3 | 82.0 | 80.4 | 74.1 |
 | Microsoft-Decision-1 | 77.0 | 0.63 | 91.0 | 63.4 | 90.5 | 51.9 | 80.7 | 87.1 | 84.6 | 81.9 | 77.3 |
@@ -67,6 +69,7 @@ Test split. Accuracy (%) on the 25 main tasks and by area, raw log-loss on the m
 | Qwen3.5 4B | 65.9 | 0.96 | 75.9 | 49.9 | 67.7 | 52.1 | 78.9 | 82.9 | 64.1 | 67.9 | 63.8 |
 | EuroLLM 9B | 61.4 | 1.06 | 75.0 | 52.0 | 71.2 | 43.0 | 65.1 | 84.2 | 73.6 | 60.1 | 47.9 |
 | Kızagan E4B | 60.3 | 1.21 | 73.9 | 46.3 | 71.2 | 38.8 | 72.6 | 76.2 | 65.3 | 63.9 | 46.2 |
+| Laya-TR | 48.8 | 1.80 | 47.7 | 27.9 | 80.8 | 57.3 | 55.6 | 56.6 | 50.2 | 39.0 | 34.6 |
 | ufakzeka-karar | 46.0 | 1.16 | 49.0 | 31.3 | 73.4 | 48.9 | 61.2 | 53.7 | 47.8 | 37.1 | 25.0 |
 | Laya (multilingual) | 45.9 | 1.90 | 56.7 | 30.3 | 53.9 | 43.1 | 59.4 | 67.5 | 49.2 | 44.6 | 24.3 |
 | Mecellem Qwen3 4B | 37.0 | 1.26 | 8.8 | 16.0 | 38.5 | 47.8 | 57.1 | 55.0 | 48.6 | 42.0 | 30.9 |
@@ -83,6 +86,15 @@ Test split. Accuracy (%) on the 25 main tasks and by area, raw log-loss on the m
 - turnike-jev-4b is an open decision model built on Qwen3.5 4B. It was run in the same way and answered every question.
   Its model card says it was trained on the training splits of 16 of the 22 jev-bench tasks, whose test splits make up
   jev-bench-tr, and of five Turkish datasets it does not name, and that test sets were used to choose the model.
+- d3 (vLLM Semantic Router) is an open decision model built on Qwen3.8-27B. It was run in the same way and answered
+  every question. Its model card does not describe its training data.
+- Pusula 2.0 (Erenext's AI Lab) is a Turkish adapter for d3. As released, it uses the adapter only for its own built-in
+  questions and answers every other question with d3 alone. Every benchmark question is of that second kind, so its row
+  was run with the adapter on for every question, an option its model card gives. The card says it was trained on
+  synthetic Turkish messages and on licensed customer messages, and lists MASSIVE and OffensEval 2020, two of the
+  benchmark's sources, as evaluation sets kept out of its training.
+- Laya-TR is an open Turkish decision model with 322M parameters. It was run in the same way and answered every
+  question; its code reads only the first 512 tokens of a text. Its model card does not name its training data.
 - The two vistalab-system-one models are ours. They were not trained on any benchmark question. For a few tasks they
   were trained on other splits of the same datasets (the training splits of TrGLUE, whose validation and test splits
   make up the workflow tasks, and of Lavoir) or on other texts from the same sources (other WebFAQ sites, fact-check
@@ -100,6 +112,9 @@ s1bench run openrouter/microsoft/microsoft-decision-1  # a decision model throug
 s1bench run cisimcik/tau-4b                            # an open decision model from Hugging Face, on one GPU
 s1bench run ufakai/ufakzeka-karar                      # an open decision model from Hugging Face, on one GPU
 s1bench run berkay123001/turnike-jev-4b                # an open decision model from Hugging Face, on one GPU
+s1bench run vllm-sr/d3                                 # an open decision model from Hugging Face, on one GPU
+s1bench run erenextlabs/pusula                         # an open decision model from Hugging Face, on one GPU
+s1bench run TurkishCodeMan/laya-tr                     # an open decision model from Hugging Face, on one GPU
 s1bench score                                          # write results/scores.csv and print the tables
 ```
 
@@ -114,10 +129,11 @@ What `s1bench build` and `s1bench run` need:
 - **Jev:** `s1bench run jev` needs a TypeSafe API key in `TYPESAFE_API_KEY`.
 - **OpenRouter:** `s1bench run openrouter/<model>` runs a decision model such as Microsoft-Decision-1 through
   OpenRouter's Decisions API. It needs an OpenRouter API key in `OPENROUTER_API_KEY` and credit on the account.
-- **Open decision models:** `s1bench run cisimcik/tau-4b`, `s1bench run ufakai/ufakzeka-karar` and
-  `s1bench run berkay123001/turnike-jev-4b` download the models from Hugging Face without a token and run code from
-  their repositories.
-- **GPU:** local models run on one CUDA GPU in bfloat16; ufakzeka-karar runs in float32.
+- **Open decision models:** `s1bench run` with the address of tau-4b, ufakzeka-karar, turnike-jev-4b, d3, Pusula or
+  Laya-TR downloads the model from Hugging Face without a token and runs code from its repository. d3 also needs the
+  packages in its requirements file, and Pusula its own package, installed as its model card says.
+- **GPU:** local models run on one CUDA GPU in bfloat16; ufakzeka-karar and Laya-TR run in float32. d3 and Pusula need
+  about 50 GB of GPU memory.
 
 ## Adding a task
 

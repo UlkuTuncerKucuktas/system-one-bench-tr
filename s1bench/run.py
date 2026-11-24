@@ -4,7 +4,7 @@ from pathlib import Path
 from . import DATA, RESULTS, read, save
 from .api import jev, openrouter
 from .llm import LLM
-from .local import Turnike, karar, tau
+from .local import Turnike, d3, karar, laya_tr, pusula, tau
 from .tasks import TASKS
 
 
@@ -19,6 +19,12 @@ def model_for(address):
         return tau()
     if address == "berkay123001/turnike-jev-4b":
         return Turnike()
+    if address == "vllm-sr/d3":
+        return d3()
+    if address == "erenextlabs/pusula":
+        return pusula()
+    if address == "TurkishCodeMan/laya-tr":
+        return laya_tr()
     return LLM(address)
 
 
