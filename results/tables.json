@@ -36615,5 +36615,95 @@
     }
    }
   }
+ },
+ "readout": {
+  "eurollm-9b": {
+   "letter_mass": 0.7685120889729352,
+   "orders_agree": 0.5484512639501171,
+   "accuracy_one_order": 0.5938396170088831,
+   "accuracy_two_orders": 0.620445755060434,
+   "log_loss_one_order": 1.1830018011667205,
+   "log_loss_two_orders": 1.0292882747216436
+  },
+  "gemma-4-12b": {
+   "letter_mass": 0.9943181860063287,
+   "orders_agree": 0.9029892138951773,
+   "accuracy_one_order": 0.7566648682102813,
+   "accuracy_two_orders": 0.7573157128294745,
+   "log_loss_one_order": 2.0710406392814527,
+   "log_loss_two_orders": 1.8867265073074415
+  },
+  "gemma-4-31b": {
+   "letter_mass": 0.9954121722801298,
+   "orders_agree": 0.9492336371579491,
+   "accuracy_one_order": 0.7916217052570264,
+   "accuracy_two_orders": 0.7912032328527743,
+   "log_loss_one_order": 3.211193959514118,
+   "log_loss_two_orders": 3.0532976670265977
+  },
+  "gemma-4-e4b": {
+   "letter_mass": 0.9841317651193952,
+   "orders_agree": 0.8948273859168356,
+   "accuracy_one_order": 0.682169105868647,
+   "accuracy_two_orders": 0.6818663972622687,
+   "log_loss_one_order": 1.723474515247449,
+   "log_loss_two_orders": 1.5984919292773145
+  },
+  "kizagan-e4b": {
+   "letter_mass": 0.7245683304105429,
+   "orders_agree": 0.6648702539814925,
+   "accuracy_one_order": 0.5798945172564439,
+   "accuracy_two_orders": 0.6115340687345275,
+   "log_loss_one_order": 1.3539463714930644,
+   "log_loss_two_orders": 1.1967753032395763
+  },
+  "kumru-2b": {
+   "letter_mass": 0.7956686360710757,
+   "orders_agree": 0.12298484517521216,
+   "accuracy_one_order": 0.37116731469346165,
+   "accuracy_two_orders": 0.36065531527595746,
+   "log_loss_one_order": 1.4999116382187947,
+   "log_loss_two_orders": 1.394090833632371
+  },
+  "qwen3.5-35b-a3b": {
+   "letter_mass": 0.9972088383272535,
+   "orders_agree": 0.8779991262560071,
+   "accuracy_one_order": 0.7244395878840832,
+   "accuracy_two_orders": 0.7248905926896754,
+   "log_loss_one_order": 0.7774097459744962,
+   "log_loss_two_orders": 0.7633425440042759
+  },
+  "qwen3.5-4b": {
+   "letter_mass": 0.9911010393565095,
+   "orders_agree": 0.7641273481869812,
+   "accuracy_one_order": 0.6575475171108198,
+   "accuracy_two_orders": 0.6550764453181884,
+   "log_loss_one_order": 0.9909247315922711,
+   "log_loss_two_orders": 0.9661548644908747
+  },
+  "qwen3.5-9b": {
+   "letter_mass": 0.9960457797308302,
+   "orders_agree": 0.8580018236096216,
+   "accuracy_one_order": 0.6965986529780106,
+   "accuracy_two_orders": 0.701673328964613,
+   "log_loss_one_order": 0.8195246908243554,
+   "log_loss_two_orders": 0.7999056802246514
+  },
+  "trendyol-asure-12b": {
+   "letter_mass": 0.983756205055248,
+   "orders_agree": 0.8920622261275931,
+   "accuracy_one_order": 0.6972278214649773,
+   "accuracy_two_orders": 0.6995201543614387,
+   "log_loss_one_order": 0.8589326812409622,
+   "log_loss_two_orders": 0.8447465243007269
+  },
+  "turkish-gemma-9b": {
+   "letter_mass": 0.9942939024802433,
+   "orders_agree": 0.8548101178892463,
+   "accuracy_one_order": 0.6616071064511431,
+   "accuracy_two_orders": 0.6653047036551624,
+   "log_loss_one_order": 1.3638610517517267,
+   "log_loss_two_orders": 1.2743570040434116
+  }
  }
 }

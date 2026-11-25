@@ -45,8 +45,9 @@ average negative log-probability of the correct answer, before any calibration; 
 (multilingual) return rounded probabilities, and a zero from them counts as half the rounding step. `results/scores.csv`
 also holds macro-F1, the Brier score and the error on Score questions for every question. `results/tables.json` holds,
 for the main tasks, 95% intervals and ranks, the log-loss after one temperature per model fitted on dev, and how often a
-model is right when it gives its answer a probability of at least 0.9. Both files are computed from the models' answers
-to every question, which are in this repository's
+model is right when it gives its answer a probability of at least 0.9. For 11 of the language models it also holds a
+check of this read-out: how much of the probability falls on the letters, and what one option order gives against the
+average of the two. Both files are computed from the models' answers to every question, which are in this repository's
 [release](https://github.com/UlkuTuncerKucuktas/system-one-bench-tr/releases/tag/answers) as one archive to unpack in
 the repository folder.
 
@@ -113,6 +114,7 @@ s1bench run berkay123001/turnike-jev-4b                # an open decision model 
 s1bench run vllm-sr/d3                                 # an open decision model from Hugging Face, on one GPU
 s1bench run erenextlabs/pusula                         # an open decision model from Hugging Face, on one GPU
 s1bench run TurkishCodeMan/laya-tr                     # an open decision model from Hugging Face, on one GPU
+s1bench readout google/gemma-4-12b-it                  # the read-out check of a Hugging Face model, on one GPU
 s1bench score                                          # write the result files and print the table
 ```
 

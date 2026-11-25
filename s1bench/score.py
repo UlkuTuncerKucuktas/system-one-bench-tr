@@ -46,6 +46,7 @@ WRONG = 0.01
 TARGETS = [0.9, 0.95]
 COVERAGES = [round(0.1 * k, 2) for k in range(1, 11)]
 EDGES = np.arange(1, 10) / 10
+READOUT = ["letter_mass", "orders_agree", "accuracy_one_order", "accuracy_two_orders", "log_loss_one_order", "log_loss_two_orders"]
 
 
 def average(values):
@@ -363,6 +364,28 @@ def tables_of(systems, pairs, draws):
     return {**tables, "pairs": pairs, "majority": majorities(), "reference": {"subsets": subsets, "areas": row["areas"], "tasks": row["tasks"]}}
 
 
+# the read-out check: the probability an LLM puts on the letters, and one option order against the average of the two
+def readout(model):
+    items = {item["id"]: item for task in MAIN for item in read(DATA / task / "test.jsonl")}
+    tasks = {}
+    for row in read(RESULTS / model / "readout.jsonl"):
+        values = tasks.setdefault(row["id"].split("/")[0], {name: [] for name in READOUT})
+        for qid, orders in row["log_probs"].items():
+            gold = gold_of(items[row["id"]], qid)
+            probs = []
+            for order in orders:
+                values["letter_mass"].append(sum(np.exp(x) for x in order.values()))
+                weights = {key: np.exp(x - max(order.values())) for key, x in order.items()}
+                probs.append({key: w / sum(weights.values()) for key, w in weights.items()})
+            two = {key: average([p[key] for p in probs]) for key in probs[0]}
+            for name, p in [("one_order", probs[0]), ("two_orders", two)]:
+                values["accuracy_" + name].append(max(p, key=p.get) == gold)
+                values["log_loss_" + name].append(-np.log(max(p[gold], FLOOR)))
+            if len(orders) == 2:
+                values["orders_agree"].append(max(probs[0], key=probs[0].get) == max(probs[1], key=probs[1].get))
+    return {name: float(average([average(values[name]) for values in tasks.values() if values[name]])) for name in READOUT}
+
+
 def answered(model_dir):
     tasks = sorted(path.name for path in model_dir.iterdir() if (path / "test.jsonl").exists())
     return tasks if all((model_dir / task / split).exists() for task in MAIN for split in ["dev.jsonl", "test.jsonl"]) else None
@@ -394,6 +417,7 @@ def score():
     for model, rank in ranks(point, drawn).items():
         systems[model]["rank"] = rank
     tables = tables_of(systems, pair_differences(point, drawn), draws)
+    tables["readout"] = {model: readout(model) for model in systems if (RESULTS / model / "readout.jsonl").exists()}
     (RESULTS / "tables.json").write_text(json.dumps(tables, indent=1))
 
     with open(RESULTS / "scores.csv", "w", newline="") as f:
