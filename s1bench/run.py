@@ -3,7 +3,7 @@ from pathlib import Path
 
 from . import DATA, RESULTS, read, save
 from .api import jev, openrouter
-from .llm import LLM
+from .llm import LLM, VLLM, DeepSeek
 from .local import Turnike, d3, karar, laya_tr, pusula, tau
 from .tasks import TASKS
 
@@ -25,6 +25,10 @@ def model_for(address):
         return pusula()
     if address == "TurkishCodeMan/laya-tr":
         return laya_tr()
+    if address == "vllm/deepseek-ai/DeepSeek-V4-Flash":
+        return DeepSeek()
+    if address.startswith("vllm/"):
+        return VLLM(address.removeprefix("vllm/"))
     return LLM(address)
 
 

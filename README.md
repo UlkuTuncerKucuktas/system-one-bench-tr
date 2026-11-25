@@ -53,13 +53,17 @@ Test split. Accuracy (%) on the 25 main tasks and by area, raw log-loss on the m
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | d3 | 81.6 | 0.46 | 91.8 | 66.3 | 92.5 | 63.1 | 86.3 | 88.9 | 90.7 | 84.6 | 84.7 |
 | Pusula 2.0 | 81.1 | 0.52 | 91.9 | 67.0 | 93.0 | 59.1 | 85.6 | 88.8 | 90.8 | 84.2 | 84.2 |
+| Gemma 4 31B | 79.1 | 3.04 | 90.3 | 60.9 | 93.2 | 58.9 | 81.4 | 87.3 | 90.5 | 82.2 | 83.7 |
 | Jev | 77.6 | 0.81 | 87.4 | 62.4 | 90.6 | 51.2 | 81.7 | 87.3 | 86.8 | 78.9 | 86.9 |
 | vistalab-system-one-12b | 77.6 | 0.59 | 88.8 | 65.0 | 92.9 | 54.5 | 83.3 | 89.3 | 82.0 | 80.4 | 74.1 |
+| Qwen3.5 397B-A17B (4-bit) | 77.5 | 0.83 | 88.7 | 58.3 | 89.5 | 57.7 | 80.8 | 86.8 | 89.3 | 80.1 | 84.4 |
 | Microsoft-Decision-1 | 77.0 | 0.63 | 91.0 | 63.4 | 90.5 | 51.9 | 80.7 | 87.1 | 84.6 | 81.9 | 77.3 |
+| Qwen3.8 27B | 76.5 | 0.66 | 87.8 | 61.5 | 87.1 | 61.1 | 81.2 | 85.8 | 90.1 | 75.9 | 78.0 |
 | tau-4b | 75.9 | 0.64 | 91.6 | 65.7 | 92.2 | 59.1 | 80.0 | 90.4 | 76.9 | 72.6 | 71.7 |
 | Gemma 4 12B | 75.9 | 1.85 | 86.2 | 61.4 | 86.5 | 58.5 | 82.0 | 87.3 | 85.3 | 77.8 | 74.2 |
 | vistalab-system-one-e4b | 75.4 | 0.62 | 87.8 | 63.3 | 92.1 | 57.5 | 79.5 | 89.7 | 76.6 | 76.3 | 66.4 |
 | Qwen3.5 35B-A3B | 74.1 | 0.75 | 85.8 | 59.8 | 82.2 | 52.9 | 76.2 | 86.0 | 86.0 | 75.9 | 79.3 |
+| DeepSeek-V4-Flash | 74.0 | 1.13 | 84.5 | 62.4 | 83.6 | 56.3 | 76.8 | 86.3 | 85.7 | 73.4 | 73.8 |
 | turnike-jev-4b | 71.9 | 0.68 | 88.3 | 59.4 | 90.1 | 50.4 | 77.7 | 87.3 | 71.5 | 73.4 | 61.9 |
 | Qwen3.5 9B | 70.6 | 0.80 | 81.1 | 54.5 | 80.6 | 56.4 | 77.7 | 84.2 | 76.7 | 70.1 | 70.5 |
 | Trendyol LLM Asure 12B | 70.2 | 0.84 | 83.1 | 62.1 | 71.6 | 39.7 | 77.8 | 87.1 | 82.9 | 75.3 | 67.5 |
@@ -75,30 +79,19 @@ Test split. Accuracy (%) on the 25 main tasks and by area, raw log-loss on the m
 | Mecellem Qwen3 4B | 37.0 | 1.26 | 8.8 | 16.0 | 38.5 | 47.8 | 57.1 | 55.0 | 48.6 | 42.0 | 30.9 |
 | Kumru 2B | 36.0 | 1.39 | 6.5 | 15.8 | 64.3 | 44.1 | 51.0 | 51.5 | 44.1 | 34.7 | 23.6 |
 
-- Jev was evaluated through TypeSafe's API. Metask cannot answer MASSIVE, so it has no routing score.
-- Microsoft-Decision-1 was evaluated through OpenRouter's Decisions API, which served it from Microsoft's Azure
-  deployment. Microsoft post-trained it from Qwen3.5 9B and describes it as optimized for English.
-- tau-4b (Cisimcik AI Lab) and ufakzeka-karar (ufak AI) [2] are open Turkish decision models. They were run on one GPU
-  through their own code, one question per request as for Jev, and answered every question. tau-4b's probabilities are
-  read before its code rounds them to four decimals. Both were trained on Turkish classification data that may overlap
-  with the benchmark's sources: ufakzeka-karar's model card lists MASSIVE, OffensEval 2020, MiDe22, FACTurk and WebFAQ
-  among its training sets, and tau-4b's card describes its training data only in general terms.
-- turnike-jev-4b is an open decision model built on Qwen3.5 4B. It was run in the same way and answered every question.
-  Its model card says it was trained on the training splits of 16 of the 22 jev-bench tasks, whose test splits make up
-  jev-bench-tr, and of five Turkish datasets it does not name, and that test sets were used to choose the model.
-- d3 (vLLM Semantic Router) is an open decision model built on Qwen3.8-27B. It was run in the same way and answered
-  every question. Its model card does not describe its training data.
-- Pusula 2.0 (Erenext's AI Lab) is a Turkish adapter for d3. As released, it uses the adapter only for its own built-in
-  questions and answers every other question with d3 alone. Every benchmark question is of that second kind, so its row
-  was run with the adapter on for every question, an option its model card gives. The card says it was trained on
-  synthetic Turkish messages and on licensed customer messages, and lists MASSIVE and OffensEval 2020, two of the
-  benchmark's sources, as evaluation sets kept out of its training.
-- Laya-TR is an open Turkish decision model with 322M parameters. It was run in the same way and answered every
-  question; its code reads only the first 512 tokens of a text. Its model card does not name its training data.
-- The two vistalab-system-one models are ours. They were not trained on any benchmark question. For a few tasks they
-  were trained on other splits of the same datasets (the training splits of TrGLUE, whose validation and test splits
-  make up the workflow tasks, and of Lavoir) or on other texts from the same sources (other WebFAQ sites, fact-check
-  reports about other claims). A check found none of the benchmark's 106,003 dev and test texts in their training data.
+- Jev was evaluated through TypeSafe's API and Microsoft-Decision-1 through OpenRouter's Decisions API. Metask cannot
+  answer MASSIVE, so it has no routing score.
+- The open decision models (tau-4b, ufakzeka-karar [2], turnike-jev-4b, d3, Pusula 2.0 and Laya-TR) were run through
+  their own code, one question per request as for Jev.
+- Pusula 2.0 is a Turkish adapter for d3. As released, it answers every question outside its own built-in ones with d3
+  alone, so its row was run with the adapter on for every question, an option its model card gives.
+- Some of these models were trained on data that may overlap with the benchmark's sources. ufakzeka-karar's model card
+  lists MASSIVE, OffensEval 2020, MiDe22, FACTurk and WebFAQ among its training sets. turnike-jev-4b's card says it was
+  trained on the training splits of 16 of the 22 jev-bench tasks, whose test splits make up jev-bench-tr, and that test
+  sets were used to choose the model.
+- The two vistalab-system-one models are ours. They were not trained on any benchmark question; for a few tasks they
+  were trained on other splits of the same datasets or on other texts from the same sources. A check found none of the
+  benchmark's dev and test texts in their training data.
 - Small differences should be read with care: two training runs of the same 12B recipe scored 77.6 and 78.1.
 
 ## Running it
@@ -107,6 +100,7 @@ Test split. Accuracy (%) on the 25 main tasks and by area, raw log-loss on the m
 pip install -e .
 s1bench build                                          # download and build the 66 tasks
 s1bench run google/gemma-4-12b-it                      # a Hugging Face model, a local folder or a PEFT adapter, on one GPU
+s1bench run vllm/google/gemma-4-31B-it                 # a Hugging Face model through vLLM, on every GPU
 s1bench run jev                                        # Jev through TypeSafe's API
 s1bench run openrouter/microsoft/microsoft-decision-1  # a decision model through OpenRouter's Decisions API
 s1bench run cisimcik/tau-4b                            # an open decision model from Hugging Face, on one GPU

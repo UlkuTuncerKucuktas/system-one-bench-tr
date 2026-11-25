@@ -1,15 +1,17 @@
+import sys
 from pathlib import Path
 
 import torch
+from huggingface_hub import snapshot_download
 from peft import PeftConfig, PeftModel
 from transformers import AutoConfig, AutoModelForCausalLM, AutoModelForImageTextToText, AutoTokenizer
 
 from .prompt import LABELS, label_token_ids, orders_of, render
 
-BATCH_SIZE = 8
-
 
 class LLM:
+    batch_size = 8
+
     def __init__(self, address):
         adapter = Path(address, "adapter_config.json").exists()
         repo = PeftConfig.from_pretrained(address).base_model_name_or_path if adapter else address
@@ -51,8 +53,8 @@ class LLM:
         texts = [self.prompt(render(item, item["questions"][qid], options)) for item, qid, options in jobs]
         by_length = sorted(range(len(jobs)), key=lambda j: len(texts[j]))
         probabilities = [None] * len(jobs)
-        for start in range(0, len(jobs), BATCH_SIZE):
-            batch = by_length[start : start + BATCH_SIZE]
+        for start in range(0, len(jobs), self.batch_size):
+            batch = by_length[start : start + self.batch_size]
             results = self.label_probabilities([texts[j] for j in batch], [len(jobs[j][2]) for j in batch])
             for j, probs in zip(batch, results):
                 probabilities[j] = probs
@@ -66,3 +68,46 @@ class LLM:
             {qid: {key: v / sum(votes.values()) for key, v in votes.items()} for qid, votes in sums.get(item["id"], {}).items()}
             for item in items
         ]
+
+
+class VLLM(LLM):
+    # a model that needs more than one GPU, through vLLM on every GPU, with the same prompts, letters and averaging
+    batch_size = 4096
+    settings = {"max_num_seqs": 128}
+
+    def __init__(self, address):
+        from vllm import LLM as Engine
+        from vllm import SamplingParams
+
+        self.tokenizer = AutoTokenizer.from_pretrained(address)
+        self.label_ids = [label_token_ids(self.tokenizer, label) for label in LABELS]
+        self.engine = Engine(address, dtype="bfloat16", tensor_parallel_size=torch.cuda.device_count(), max_model_len=32768, gpu_memory_utilization=0.94, language_model_only=True, **self.settings)
+        # the letters' log-probabilities over the whole vocabulary, not only among the most probable tokens
+        letter_ids = sorted({i for ids in self.label_ids for i in ids})
+        self.params = SamplingParams(max_tokens=1, temperature=0, logprob_token_ids=letter_ids, detokenize=False)
+
+    def label_probabilities(self, texts, sizes):
+        from vllm.inputs import TokensPrompt
+
+        prompts = [TokensPrompt(prompt_token_ids=self.tokenizer(text, add_special_tokens=False).input_ids) for text in texts]
+        rows = [output.outputs[0].logprobs[0] for output in self.engine.generate(prompts, self.params)]
+        return [
+            torch.stack([torch.tensor([row[i].logprob for i in ids]).logsumexp(0) for ids in self.label_ids[:size]]).softmax(0).tolist()
+            for row, size in zip(rows, sizes)
+        ]
+
+
+class DeepSeek(VLLM):
+    # DeepSeek-V4 has no chat template, only the encoder in its repository; its start-up on two GPUs needs smaller batches
+    settings = {"max_num_seqs": 32, "max_num_batched_tokens": 4096}
+
+    def __init__(self):
+        address = "deepseek-ai/DeepSeek-V4-Flash"
+        sys.path.insert(0, str(Path(snapshot_download(address, allow_patterns="encoding/*"), "encoding")))
+        from encoding_dsv4 import encode_messages
+
+        self.encode = encode_messages
+        super().__init__(address)
+
+    def prompt(self, text):
+        return self.encode([{"role": "user", "content": text}], thinking_mode="chat")
