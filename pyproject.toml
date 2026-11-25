@@ -1,7 +1,7 @@
 [project]
 name = "s1bench"
 version = "1.0"
-dependencies = ["accelerate", "datasets", "flash-linear-attention", "httpx", "kagglehub", "peft", "torch", "transformers"]
+dependencies = ["accelerate", "datasets", "flash-linear-attention", "httpx", "kagglehub", "numpy", "peft", "torch", "transformers"]
 
 [project.scripts]
 s1bench = "s1bench.__main__:main"
